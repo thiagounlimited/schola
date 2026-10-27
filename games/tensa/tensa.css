@@ -1,0 +1,134 @@
+/* Tensa — mapa, HUD e vitória. Usa os tokens do shell (css/schola.css). */
+
+/* ---------- Mapa ---------- */
+.tz-map {
+  height: 100%;
+  overflow-y: auto;
+  padding: max(14px, env(safe-area-inset-top)) var(--gutter) 36px;
+  max-width: 980px; margin: 0 auto; width: 100%;
+}
+.tz-top { display: flex; align-items: center; gap: 12px; }
+.tz-logo {
+  flex: 1; margin: 0;
+  font-size: clamp(28px, 6vw, 40px); font-weight: 700; letter-spacing: 0.12em;
+  background: linear-gradient(90deg, var(--coral), var(--sun) 40%, var(--mint) 70%, #a78bfa);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 14px rgba(255, 107, 94, 0.3));
+}
+.tz-total { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 15px; }
+.tz-total svg { width: 18px; height: 18px; color: var(--sun); }
+.tz-total b { color: var(--ink); }
+.tz-intro { color: var(--muted); font-size: 16px; line-height: 1.45; margin: 12px 0 6px; max-width: 60ch; }
+
+.tz-world { margin-top: 22px; }
+.tz-world-head h2 { margin: 0; font-size: 20px; color: var(--wc); }
+.tz-world-head p { margin: 2px 0 12px; color: var(--muted); font-size: 14.5px; }
+.tz-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.lv {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  text-align: left;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.lv:not(.locked):hover { background: var(--card-2); box-shadow: 0 0 0 1px color-mix(in srgb, var(--wc) 55%, transparent); }
+.lv:not(.locked):active { transform: scale(0.96); }
+.lv-num {
+  display: grid; place-items: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  font-weight: 700; font-size: 17px;
+  color: #120f36;
+  background: var(--wc);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--wc) 50%, transparent);
+}
+.lv-name { font-weight: 500; font-size: 15.5px; }
+.lv-stars { display: flex; gap: 2px; }
+.lv-stars i { display: grid; color: rgba(255, 255, 255, 0.16); }
+.lv-stars i.on { color: var(--sun); }
+.lv-stars svg { width: 16px; height: 16px; }
+.lv.locked { opacity: 0.45; cursor: default; }
+.lv.locked .lv-num { background: rgba(255, 255, 255, 0.1); color: var(--muted); box-shadow: none; }
+.lv.locked .lv-num svg { width: 18px; height: 18px; }
+
+.tz-free {
+  margin-top: 28px; width: 100%;
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  text-align: left;
+  background: linear-gradient(120deg, rgba(56, 189, 248, 0.16), rgba(167, 139, 250, 0.14));
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.tz-free b { display: block; font-size: 19px; font-weight: 600; }
+.tz-free small { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+.tz-free > span:nth-child(2) { flex: 1; }
+.tz-free-ico { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; flex: none; }
+.tz-free-go { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #38bdf8; color: #0b0a26; flex: none; }
+
+/* ---------- Jogo ---------- */
+.tz-play { position: relative; display: flex; flex-direction: column; height: 100%; }
+.tz-hud {
+  display: flex; align-items: center; gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) var(--gutter) 6px;
+}
+.tz-hud-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tz-hud-name { font-weight: 600; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tz-hud-status { color: var(--muted); font-size: 14px; min-height: 1.2em; }
+.tz-hud-status.flash { animation: flash 0.6s ease; }
+@keyframes flash { 30% { color: var(--coral); transform: scale(1.08); } }
+.tz-hud-actions { display: flex; gap: 8px; }
+
+.tz-stage { position: relative; flex: 1; min-height: 0; }
+.tz-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+.tz-msg {
+  position: absolute; left: 0; right: 0; top: 4px;
+  margin: 0 auto;
+  width: fit-content;
+  transform: translateY(-6px);
+  max-width: min(92%, 520px);
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(21, 18, 63, 0.88);
+  border: 1px solid var(--line);
+  font-size: 15px; text-align: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+.tz-msg.show { opacity: 1; transform: none; }
+.tz-foot { margin: 0; padding: 4px var(--gutter) max(10px, env(safe-area-inset-bottom)); text-align: center; color: rgba(169, 163, 209, 0.6); font-size: 13px; }
+
+/* ---------- Vitória ---------- */
+.tz-win {
+  position: absolute; inset: 0; z-index: 5;
+  display: grid; place-items: center;
+  padding: var(--gutter);
+  background: rgba(8, 6, 28, 0.55);
+  opacity: 0; transition: opacity 0.35s ease;
+}
+.tz-win.in { opacity: 1; }
+.tz-win-card {
+  width: min(100%, 380px);
+  padding: 26px 22px 20px;
+  border-radius: 28px;
+  text-align: center;
+  background: linear-gradient(160deg, #221d5e, #15123f);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 60px rgba(124, 77, 255, 0.25);
+  transform: scale(0.9); transition: transform 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.tz-win.in .tz-win-card { transform: none; }
+.tz-win-card h2 { margin: 0; font-size: 32px; }
+.tz-win-stars { display: flex; justify-content: center; gap: 8px; margin: 14px 0 10px; }
+.tz-win-stars i { display: grid; color: rgba(255, 255, 255, 0.14); transform: scale(0); animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) forwards; animation-delay: var(--d); }
+.tz-win-stars i.on { color: var(--sun); filter: drop-shadow(0 0 12px rgba(255, 210, 63, 0.6)); }
+.tz-win-stars svg { width: 48px; height: 48px; }
+@keyframes pop { to { transform: scale(1); } }
+.tz-win-card ul { list-style: none; padding: 0; margin: 0 0 6px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.tz-win-xp { margin: 6px 0 0; color: var(--mint); font-weight: 500; }
+.tz-win-actions { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 18px; }
+.tz-win-actions .cta { margin: 0; display: inline-flex; align-items: center; gap: 4px; padding: 12px 22px; }
+.tz-win-actions .cta svg { width: 20px; height: 20px; }

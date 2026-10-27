@@ -1,0 +1,212 @@
+/* SCHOLA — noite índigo com neon (emblema) + cores doces dos elásticos (wordmark). */
+:root {
+  --bg: #0b0a26;
+  --bg-2: #15123f;
+  --ink: #f4f1ff;
+  --muted: #a9a3d1;
+  --line: rgba(255, 255, 255, 0.1);
+  --card: rgba(255, 255, 255, 0.055);
+  --card-2: rgba(255, 255, 255, 0.09);
+  --coral: #ff6b5e;
+  --violet: #7c4dff;
+  --mint: #3edbb0;
+  --sun: #ffd23f;
+  --neon-pink: #ff4fd8;
+  --neon-cyan: #38e1ff;
+  --radius: 22px;
+  --gutter: max(16px, env(safe-area-inset-left));
+  --font: 'Fredoka', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+button:focus-visible, .game-card:focus-visible { outline: 3px solid var(--neon-cyan); outline-offset: 3px; }
+img { display: block; max-width: 100%; }
+
+/* ---------- Céu animado ---------- */
+.sky { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.sky i {
+  position: absolute;
+  width: 70vmax; height: 70vmax;
+  border-radius: 50%;
+  opacity: 0.55;
+  animation: drift 26s ease-in-out infinite alternate;
+}
+.sky i:nth-child(1) { background: radial-gradient(circle, rgba(124, 77, 255, 0.45), transparent 62%); top: -30vmax; left: -20vmax; }
+.sky i:nth-child(2) { background: radial-gradient(circle, rgba(255, 79, 216, 0.28), transparent 62%); bottom: -35vmax; right: -25vmax; animation-duration: 32s; }
+.sky i:nth-child(3) { background: radial-gradient(circle, rgba(56, 225, 255, 0.22), transparent 62%); top: 30%; left: 40%; animation-duration: 38s; }
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(8vmax, 6vmax) scale(1.12); }
+}
+
+#app { position: relative; z-index: 1; height: 100dvh; }
+
+.screen {
+  position: absolute; inset: 0;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.screen.in { opacity: 1; transform: none; }
+.screen.out { opacity: 0; transform: scale(1.04); }
+
+/* ---------- Abertura ---------- */
+.splash {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 24px var(--gutter); text-align: center; cursor: pointer;
+}
+.splash-emblem {
+  width: min(46vw, 34vh, 260px); aspect-ratio: 1;
+  border-radius: 50%;
+  animation: breathe 4s ease-in-out infinite;
+}
+.splash-emblem img { width: 100%; height: 100%; border-radius: 50%; mix-blend-mode: screen; }
+.splash-word { width: min(78vw, 460px); filter: drop-shadow(0 10px 30px rgba(124, 77, 255, 0.35)); }
+.splash-sub { margin: 0; color: var(--muted); font-size: clamp(15px, 2.2vw, 18px); }
+@keyframes breathe {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 18px rgba(255, 79, 216, 0.35)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 34px rgba(56, 225, 255, 0.5)); }
+}
+
+.cta {
+  margin-top: 8px;
+  padding: 16px 30px;
+  border-radius: 999px;
+  font-size: 18px; font-weight: 600;
+  background: linear-gradient(135deg, var(--coral), var(--violet));
+  box-shadow: 0 10px 30px rgba(124, 77, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.pulse { animation: pulse 2.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.05); box-shadow: 0 14px 40px rgba(255, 79, 216, 0.5); } }
+
+/* ---------- Hub ---------- */
+.hub {
+  overflow-y: auto;
+  padding: max(14px, env(safe-area-inset-top)) var(--gutter) 32px;
+  max-width: 980px; margin: 0 auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hub-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hub-word { width: min(52vw, 270px); filter: drop-shadow(0 6px 18px rgba(124, 77, 255, 0.35)); }
+.hub-hello { margin: 10px 0 0; color: var(--muted); font-size: 17px; }
+.sec-title { margin: 26px 0 12px; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+.icon-btn {
+  display: grid; place-items: center;
+  width: 46px; height: 46px; flex: none;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.icon-btn:active { transform: scale(0.92); }
+.icon-btn:hover { background: var(--card-2); }
+
+.skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.skill {
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+.skill-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.skill-name { font-weight: 600; font-size: 16px; }
+.skill-lv { font-size: 13px; font-weight: 600; color: var(--c); }
+.skill-bar { margin: 10px 0 6px; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.skill-bar i { display: block; height: 100%; border-radius: inherit; background: var(--c); box-shadow: 0 0 12px var(--c); transition: width 0.8s ease; }
+.skill-hint { font-size: 12.5px; color: var(--muted); }
+
+.games { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.game-card {
+  position: relative;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px;
+  border-radius: var(--radius);
+  text-align: left;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.game-card:not(.soon):hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent); }
+.game-card:not(.soon):active { transform: scale(0.98); }
+.game-art {
+  width: 92px; height: 92px; flex: none;
+  border-radius: 18px;
+  background: radial-gradient(circle at 30% 25%, #2a2468, #120f36);
+  overflow: hidden;
+}
+.game-art svg { width: 100%; height: 100%; }
+.game-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.game-title { font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }
+.game-tag { color: var(--muted); font-size: 14.5px; }
+.game-stars { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 14px; color: var(--muted); }
+.game-stars svg { width: 16px; height: 16px; color: var(--sun); }
+.game-stars b { color: var(--ink); font-weight: 600; }
+.game-play {
+  display: grid; place-items: center;
+  width: 48px; height: 48px; flex: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--coral), var(--violet));
+  box-shadow: 0 8px 22px rgba(255, 107, 94, 0.35);
+}
+.game-card.soon { opacity: 0.55; cursor: default; }
+.soon-art { display: grid; place-items: center; color: var(--accent); }
+.soon-art svg { width: 34px; height: 34px; }
+.hub-foot { margin-top: 34px; text-align: center; color: rgba(169, 163, 209, 0.55); font-size: 13px; }
+
+/* ---------- Ajustes ---------- */
+.sheet-wrap {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; place-items: end center;
+  background: rgba(5, 4, 20, 0.6);
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.sheet-wrap.in { opacity: 1; }
+.sheet {
+  width: min(100%, 460px);
+  margin: 0 auto;
+  padding: 18px 18px max(22px, env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  transform: translateY(30px); transition: transform 0.3s ease;
+}
+.sheet-wrap.in .sheet { transform: none; }
+@media (min-width: 700px) {
+  .sheet-wrap { place-items: center; }
+  .sheet { border-radius: 26px; }
+}
+.sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sheet-head h2 { margin: 0; font-size: 22px; }
+.set-row { display: flex; align-items: center; gap: 12px; padding: 14px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.set-ico { display: grid; color: var(--muted); }
+.set-label { flex: 1; font-size: 17px; }
+.set-row input { position: absolute; opacity: 0; pointer-events: none; }
+.switch { width: 50px; height: 30px; border-radius: 99px; background: rgba(255, 255, 255, 0.14); position: relative; transition: background 0.2s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+.set-row input:checked + .switch { background: var(--mint); }
+.set-row input:checked + .switch::after { transform: translateX(20px); }
+.set-row input:focus-visible + .switch { outline: 3px solid var(--neon-cyan); outline-offset: 2px; }
+.danger { margin-top: 18px; width: 100%; padding: 13px; border-radius: 14px; color: #ff8f86; background: rgba(255, 107, 94, 0.1); border: 1px solid rgba(255, 107, 94, 0.25); }
+
+/* ---------- Tela de jogo (genérica) ---------- */
+.game-screen { display: flex; flex-direction: column; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sky i, .splash-emblem, .pulse { animation: none; }
+}
