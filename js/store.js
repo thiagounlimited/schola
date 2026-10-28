@@ -105,7 +105,7 @@ export class Store {
   _row(p) {
     return {
       id: p.id, nickname: p.nickname, avatar: p.avatar, city: p.city,
-      data: { games: p.games, history: p.history.slice(-400), commitments: p.commitments, freeMinutes: p.freeMinutes },
+      data: { games: p.games, history: p.history.slice(-400), commitments: p.commitments, freeMinutes: p.freeMinutes, focusMinutes: p.focusMinutes || 0 },
       updated_at: new Date().toISOString(),
     };
   }
@@ -129,6 +129,7 @@ export class Store {
     const commits = new Set(prof.commitments.map((c) => c.id));
     for (const c of d.commitments || []) if (!commits.has(c.id)) prof.commitments.push(c);
     prof.freeMinutes = Math.max(prof.freeMinutes || 0, d.freeMinutes || 0);
+    prof.focusMinutes = Math.max(prof.focusMinutes || 0, d.focusMinutes || 0);
     return prof;
   }
 
@@ -174,6 +175,7 @@ export class Store {
     for (const g of Object.values(this.user?.games || {}))
       for (const r of Object.values(g.levels)) if (r.skill === skillId) pts += r.points;
     if (skillId === 'criatividade') pts += (this.user?.freeMinutes || 0) * 2000;
+    if (skillId === 'atencao') pts += (this.user?.focusMinutes || 0) * 2000;
     return pts;
   }
 
@@ -190,9 +192,11 @@ export class Store {
     return { prev, best: Math.max(prev, points), gained: Math.max(0, points - prev) };
   }
 
-  addFreeMinute() {
+  // Minutos de modo livre: Treino livre do Tensa conta para Criatividade, Respiro do Lume para Atenção.
+  addFreeMinute(skill = 'criatividade') {
     if (!this.user) return;
-    this.user.freeMinutes = (this.user.freeMinutes || 0) + 1;
+    if (skill === 'atencao') this.user.focusMinutes = (this.user.focusMinutes || 0) + 1;
+    else this.user.freeMinutes = (this.user.freeMinutes || 0) + 1;
     this.save();
     this._sync();
   }
@@ -242,7 +246,7 @@ export class Store {
   resetUser() {
     const u = this.user;
     if (!u) return;
-    Object.assign(u, { games: {}, history: [], commitments: [], freeMinutes: 0 });
+    Object.assign(u, { games: {}, history: [], commitments: [], freeMinutes: 0, focusMinutes: 0 });
     this.save();
     this._sync();
   }

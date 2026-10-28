@@ -2,13 +2,14 @@
 // jogos, Boas Ações Cognitivas) e o sistema de Ajuda compartilhado por todos os jogos.
 // Cada sub-jogo é um módulo com { id, title, tagline, accent, cover, skills, mount(root, api) }.
 import tensa from '../games/tensa/index.js';
+import lume from '../games/lume/index.js';
 import { SoundEngine } from './audio.js';
 import { Store } from './store.js';
 import { icons } from './icons.js';
 import { SKILLS, AVATARS, DEEDS, avatarById, deedById } from './catalog.js';
 import { RANKS, MAX_POINTS, rankFor, fmt } from './scoring.js';
 
-const GAMES = [tensa];
+const GAMES = [tensa, lume];
 const COMING_SOON = [
   { title: 'Em breve', tagline: 'Um desafio de memória de trabalho', color: '#A78BFA' },
   { title: 'Em breve', tagline: 'Um desafio de lógica e padrões', color: '#3EDBB0' },
@@ -564,7 +565,7 @@ function openGame(game, sub) {
         levels: () => store.game(game.id).levels,
         points: () => store.gamePoints(game.id),
         saveLevel: (levelId, result) => store.saveLevel(game.id, levelId, result),
-        addFreeMinute: () => store.addFreeMinute(),
+        addFreeMinute: (skill) => store.addFreeMinute(skill),
       },
     };
     show(el);

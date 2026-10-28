@@ -177,6 +177,40 @@ export class SoundEngine {
     });
   }
 
+  // Camada de "Fluxo": brilho harmônico que cresce com o foco contínuo (0–1).
+  setFlow(v) {
+    if (!this.ctx) return;
+    const level = this.musicOn ? Math.max(0, Math.min(1, v)) : 0;
+    if (!this.flow) {
+      if (level <= 0) return;
+      const { ctx } = this;
+      const g = ctx.createGain();
+      g.gain.value = 0.0001;
+      const trem = ctx.createGain();
+      trem.gain.value = 0.7;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.35;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 0.3;
+      lfo.connect(lfoGain).connect(trem.gain);
+      trem.connect(g).connect(this.bus);
+      const oscs = [noteFreq(7), noteFreq(10), noteFreq(12), noteFreq(14)].map((fr, i) => {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = fr;
+        o.detune.value = (i - 1.5) * 3;
+        const og = ctx.createGain();
+        og.gain.value = [0.5, 0.35, 0.25, 0.15][i];
+        o.connect(og).connect(trem);
+        o.start();
+        return o;
+      });
+      lfo.start();
+      this.flow = { g, oscs: [...oscs, lfo] };
+    }
+    this.flow.g.gain.setTargetAtTime(0.0001 + 0.05 * level, this.ctx.currentTime, 0.6);
+  }
+
   _startPad() {
     if (this.pad || !this.ctx) return;
     const { ctx } = this;

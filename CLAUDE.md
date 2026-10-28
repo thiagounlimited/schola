@@ -29,5 +29,12 @@ Todo jogo deve: distribuir 1.000.000 pontos entre as fases, marcar cada fase com
 - `levels.js`: 12 fases, cada uma com `skill`, `focus` e um desafio novo; `FREE` é o treino livre (sem pontos, conta minutos de Criatividade).
 - Pontos da fase: 100% dentro do par; cada tacada extra tira 20% (mínimo 35%). Ajuda não tira pontos: custa um compromisso de boa ação.
 
+## Lume (atenção, economia cognitiva, monotasking e resíduo de atenção)
+- `engine.js`: o dedo é o feixe de foco; a chama sob ele cresce (`need` segundos). Trocar de chama no meio deixa um fio (resíduo: −25% de velocidade por fio aberto) e custa `switchCost` de luz; mudar de tipo custa `ctxCost`. Levantar o dedo numa chama começada mostra a âncora ⚓ (estacionar = sem resíduo). Bolhas são distrações (tocar = interrupção + pontinhos falsos). Losango ciano = sinal urgente com prazo. Fluxo cresce com foco contínuo e liga a camada `audio.setFlow()`.
+- `levels.js`: 12 fases + `FREE` (Respiro: minutos de foco contam para Atenção via `addFreeMinute('atencao')`).
+- Pontos: 60% concluir + 25% calma (cada interrupção além do `par` tira um quarto disso) + 15% tempo em Fluxo. Estrelas pelas interrupções.
+- `node tools/check-lume.js [id]`: um robô "uma coisa de cada vez" precisa vencer cada fase com 3 estrelas; um robô multitarefa mostra o contraste. Rode após mexer em `games/lume/`.
+- Abrir com `?local` desliga o Supabase e expõe `window.__lume` (o `Board` atual) para testes.
+
 ## Convenções
 - Interface em português do Brasil, tom gentil (nunca "game over"). Nomes das faixas de pontos ficam em inglês (decisão do produto).

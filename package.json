@@ -6,6 +6,6 @@
   "description": "SCHOLA — jogos leves para desenvolvimento cognitivo",
   "scripts": {
     "dev": "py -m http.server 5173",
-    "check": "node tools/check-levels.js"
+    "check": "node tools/check-levels.js && node tools/check-lume.js"
   }
 }

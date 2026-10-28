@@ -1,0 +1,108 @@
+/* Lume — mapa, HUD, vitória e "quase". Usa os tokens do shell (css/schola.css). */
+
+/* ---------- Mapa ---------- */
+.lm-map { height: 100%; overflow-y: auto; padding: max(14px, env(safe-area-inset-top)) var(--gutter) 40px; max-width: 760px; margin: 0 auto; width: 100%; }
+.lm-top { display: flex; align-items: center; gap: 12px; }
+.lm-logo { margin: 0; font-size: clamp(28px, 6vw, 38px); letter-spacing: 0.18em; background: linear-gradient(90deg, #FFD23F, #FFB547 40%, #38E1FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lm-score { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lm-score > div { padding: 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.lm-score span { color: var(--muted); font-size: 13px; }
+.lm-score b { font-family: var(--display); font-size: 26px; }
+.lm-score small { color: var(--muted); font-size: 13px; }
+.lm-rank b { color: var(--rc); }
+.lm-rank i { margin-top: 8px; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.lm-rank u { display: block; height: 100%; background: var(--rc); box-shadow: 0 0 10px var(--rc); }
+.lm-how { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0; padding: 12px 14px; border-radius: 14px; background: rgba(56, 225, 255, 0.06); border: 1px solid rgba(56, 225, 255, 0.2); color: var(--muted); line-height: 1.45; font-size: 15px; }
+.lm-how svg { flex: none; color: var(--cyan); }
+
+.lm-path { display: grid; gap: 10px; position: relative; }
+.lm-level {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; border-radius: 18px; text-align: left;
+  background: var(--card); border: 1px solid var(--line);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s;
+}
+.lm-level:not(.locked):hover { background: var(--card-2); }
+.lm-level:not(.locked):active { transform: scale(0.985); }
+.lm-level.next { border-color: color-mix(in srgb, var(--c) 60%, transparent); background: color-mix(in srgb, var(--c) 9%, var(--bg-2)); box-shadow: 0 0 40px color-mix(in srgb, var(--c) 18%, transparent); padding: 18px 14px; }
+.lm-level.locked { opacity: 0.45; cursor: default; }
+.lm-num { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; font-family: var(--display); font-weight: 700; font-size: 18px; color: #05050c; background: var(--c); }
+.lm-level.done .lm-num { background: transparent; color: var(--c); border: 2px solid var(--c); }
+.lm-level.locked .lm-num { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+.lm-level.locked .lm-num svg { width: 18px; height: 18px; }
+.lm-lv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lm-lv-top { display: flex; flex-direction: column; }
+.lm-lv-top em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
+.lm-lv-top b { font-family: var(--display); font-size: 18px; }
+.lm-focus { display: inline-flex; align-items: center; gap: 6px; color: var(--c); font-size: 14px; font-weight: 600; }
+.lm-focus svg { width: 16px; height: 16px; }
+.lm-focus i { font-style: normal; color: var(--muted); font-weight: 400; }
+.lm-goal { color: var(--muted); font-size: 14px; line-height: 1.4; }
+.lm-level:not(.next) .lm-goal { display: none; }
+.lm-lv-pts { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.lm-lv-pts b { font-family: var(--display); font-size: 16px; }
+.lm-lv-pts small { color: var(--muted); font-size: 12px; }
+.lm-more { display: flex; align-items: center; gap: 8px; justify-content: center; margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+.lm-more svg { width: 16px; height: 16px; }
+
+.lm-free { margin-top: 26px; width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; text-align: left; background: linear-gradient(120deg, rgba(255, 181, 71, 0.12), rgba(56, 225, 255, 0.08)); border: 1px solid rgba(255, 181, 71, 0.28); }
+.lm-free b { display: block; font-family: var(--display); font-size: 18px; }
+.lm-free small { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+.lm-free > span:nth-child(2) { flex: 1; }
+.lm-free-ico { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: rgba(255, 181, 71, 0.16); color: #FFD08A; flex: none; }
+.lm-free-go { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #FFB547; color: #05050c; flex: none; }
+
+/* ---------- Jogo ---------- */
+.lm-play { position: relative; display: flex; flex-direction: column; height: 100%; }
+.lm-hud { display: flex; align-items: center; gap: 10px; padding: max(10px, env(safe-area-inset-top)) var(--gutter) 4px; }
+.lm-hud-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lm-hud-name { font-family: var(--display); font-weight: 600; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lm-hud-status { color: var(--muted); font-size: 13.5px; min-height: 1.2em; }
+.lm-hud-actions { display: flex; gap: 8px; }
+.lm-help { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border-radius: 13px; background: rgba(255, 79, 216, 0.1); border: 1px solid rgba(255, 79, 216, 0.35); font-weight: 600; font-size: 15px; }
+.lm-help svg { width: 20px; height: 20px; color: var(--magenta); }
+@media (max-width: 420px) { .lm-help span { display: none; } .lm-help { width: 44px; padding: 0; justify-content: center; } }
+.lm-focusbar { display: flex; align-items: center; gap: 8px; margin: 2px var(--gutter) 0; font-size: 13.5px; color: var(--muted); }
+.lm-focusbar svg { width: 16px; height: 16px; color: var(--c); }
+.lm-focusbar b { color: var(--c); font-weight: 600; }
+
+.lm-stage { position: relative; flex: 1; min-height: 0; }
+.lm-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+.lm-msg {
+  position: absolute; left: 0; right: 0; top: 6px; margin: 0 auto; width: fit-content; max-width: min(92%, 520px);
+  padding: 9px 16px; border-radius: 12px;
+  background: rgba(13, 13, 26, 0.9); border: 1px solid var(--line);
+  font-size: 14.5px; text-align: center;
+  opacity: 0; transform: translateY(-6px); pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+.lm-msg.show { opacity: 1; transform: none; }
+
+/* ---------- Vitória ---------- */
+.lm-over { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: var(--gutter); background: rgba(2, 2, 8, 0.6); opacity: 0; transition: opacity 0.35s ease; }
+.lm-over.in { opacity: 1; }
+.lm-card {
+  width: min(100%, 380px); padding: 26px 22px 20px; border-radius: 26px; text-align: center;
+  background: linear-gradient(160deg, #191930, #0d0d1a); max-height: calc(100% - 24px); overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 181, 71, 0.18);
+  transform: scale(0.92); transition: transform 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.lm-over.in .lm-card { transform: none; }
+.lm-card h2 { margin: 0; font-size: 30px; }
+.lm-stars { display: flex; justify-content: center; gap: 8px; margin: 12px 0 4px; }
+.lm-stars i { display: grid; color: rgba(255, 255, 255, 0.12); transform: scale(0); animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) forwards; animation-delay: var(--d); }
+.lm-stars i.on { color: var(--sun); filter: drop-shadow(0 0 12px rgba(255, 210, 63, 0.55)); }
+.lm-stars svg { width: 42px; height: 42px; }
+@keyframes pop { to { transform: scale(1); } }
+.lm-pts { margin: 6px 0 8px; color: var(--muted); }
+.lm-pts b { font-family: var(--display); font-size: 38px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lm-card ul { list-style: none; padding: 0; margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.7; }
+.lm-total { margin: 10px 0 0; font-size: 14.5px; }
+.lm-actions { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 18px; }
+.lm-actions .cta { padding: 12px 22px; }
+.lm-tip { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(255, 181, 71, 0.08); border: 1px solid rgba(255, 181, 71, 0.22); font-size: 14px; line-height: 1.45; text-align: left; color: var(--muted); }
+.lm-tip b { color: #FFD08A; font-weight: 600; }
+.lm-reason { margin: 10px 0 0; font-size: 16px; }
+.lm-how span b { color: #FF8FD8; font-weight: 600; }
+.lm-how span { flex: 1; }
