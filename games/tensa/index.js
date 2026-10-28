@@ -1,36 +1,31 @@
-// Tensa — sub-jogo de elásticos. Mapa de fases, HUD, vitória e Ateliê livre.
-import { LEVELS, WORLDS, FREE } from './levels.js';
+// Tensa — estilingue de elástico + bilhar/golfe. Mapa de fases, HUD, Ajuda e vitória.
+import { LEVELS, FREE } from './levels.js';
 import { Board } from './engine.js';
+import { findShot, grabCandidates } from './solver.js';
 import { icons } from '../../js/icons.js';
+import { SKILLS } from '../../js/catalog.js';
+import { rankFor, fmt, MAX_POINTS } from '../../js/scoring.js';
 
 const CSS_ID = 'tensa-css';
-const WIN_TITLES = ['Harmonia!', 'Que leveza!', 'Lindo!', 'Fluiu!', 'Em sintonia!'];
-
-const ART = `
-<svg viewBox="0 0 100 100" aria-hidden="true">
-  <defs>
-    <radialGradient id="tz-pin" cx="35%" cy="30%"><stop offset="0" stop-color="#7a72ff"/><stop offset="1" stop-color="#1a1550"/></radialGradient>
-    <radialGradient id="tz-seed"><stop offset="0" stop-color="#FFD23F" stop-opacity=".7"/><stop offset="1" stop-color="#FFD23F" stop-opacity="0"/></radialGradient>
-  </defs>
-  <path d="M50 18 L82 72 L18 72 Z" fill="rgba(255,107,94,.18)"/>
-  <circle cx="50" cy="54" r="15" fill="url(#tz-seed)"/>
-  ${[0, 60, 120, 180, 240, 300].map((a) => `<ellipse cx="${50 + Math.cos((a * Math.PI) / 180) * 6}" cy="${54 + Math.sin((a * Math.PI) / 180) * 6}" rx="5" ry="2.8" transform="rotate(${a} ${50 + Math.cos((a * Math.PI) / 180) * 6} ${54 + Math.sin((a * Math.PI) / 180) * 6})" fill="#FFD23F"/>`).join('')}
-  <circle cx="50" cy="54" r="3.4" fill="#FFF8E8"/>
-  <path d="M50 18 L82 72 L18 72 Z" fill="none" stroke="#FF6B5E" stroke-width="7" stroke-opacity=".25" stroke-linejoin="round"/>
-  <path d="M50 18 L82 72 Q50 80 18 72 Z" fill="none" stroke="#FF6B5E" stroke-width="3" stroke-linejoin="round"/>
-  <path d="M18 34 L40 88" stroke="#3EDBB0" stroke-width="3" stroke-linecap="round"/>
-  ${[[50, 18], [82, 72], [18, 72], [18, 34], [40, 88], [84, 26]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5.2" fill="url(#tz-pin)" stroke="rgba(255,255,255,.3)"/>`).join('')}
-</svg>`;
+const WIN_TITLES = ['Na mosca!', 'Que tacada!', 'Precisão pura!', 'Encaçapou!'];
+const skillOf = (id) => SKILLS.find((s) => s.id === id);
 
 export default {
   id: 'tensa',
-  title: 'Tensa',
-  tagline: 'Estique, prenda, ouça.',
-  accent: '#FF6B5E',
-  art: ART,
-  totalStars: LEVELS.length * 3,
+  title: 'TENSA',
+  tagline: 'Estique o elástico, mire e encaçape. Bilhar e golfe movidos a tensão.',
+  accent: '#FF4FD8',
+  cover: new URL('./cover.webp', import.meta.url).href,
+  skills: ['espacial', 'planejamento', 'atencao', 'memoria'],
   mount: (root, api) => new TensaApp(root, api),
 };
+
+// Pontos da fase: tudo dentro do par; cada tacada extra tira 20% (mínimo 35%).
+function scoreLevel(level, strokes) {
+  const extra = Math.max(0, strokes - level.par);
+  const f = extra === 0 ? 1 : Math.max(0.35, 1 - 0.2 * extra);
+  return { points: Math.round(level.points * f), stars: extra === 0 ? 3 : extra === 1 ? 2 : 1 };
+}
 
 class TensaApp {
   constructor(root, api) {
@@ -56,8 +51,8 @@ class TensaApp {
 
   destroy() { this._stopPlay(); }
 
-  _stars() { return this.api.progress.stars(); }
-  _unlocked(i) { return i === 0 || (this._stars()[LEVELS[i - 1].id] || 0) > 0; }
+  _records() { return this.api.progress.levels(); }
+  _unlocked(i) { return i === 0 || Boolean(this._records()[LEVELS[i - 1].id]); }
 
   _stopPlay() {
     this.board?.destroy();
@@ -66,41 +61,49 @@ class TensaApp {
     clearTimeout(this.msgTimer);
   }
 
-  // ---------- Mapa ----------
+  // ---------- Mapa: só o que importa agora ----------
   showMap() {
-    const stars = this._stars();
-    const total = Object.values(stars).reduce((a, b) => a + b, 0);
-    const starRow = (n) => `<span class="lv-stars">${[1, 2, 3].map((k) => `<i class="${k <= n ? 'on' : ''}">${icons.star}</i>`).join('')}</span>`;
+    const rec = this._records();
+    const pts = this.api.progress.points();
+    const rank = rankFor(pts);
+    const nextIdx = LEVELS.findIndex((_, i) => this._unlocked(i) && !rec[LEVELS[i].id]);
+    const visibleUntil = nextIdx < 0 ? LEVELS.length : nextIdx + 2; // concluídas + próxima + 1 espiada
+    const shown = LEVELS.slice(0, visibleUntil);
+    const hidden = LEVELS.length - shown.length;
+
+    const card = (l, i) => {
+      const r = rec[l.id];
+      const open = this._unlocked(i);
+      const isNext = i === nextIdx;
+      const sk = skillOf(l.skill);
+      return `
+        <button class="tz-level ${isNext ? 'next' : ''} ${open ? '' : 'locked'} ${r ? 'done' : ''}" data-lv="${l.id}" ${open ? '' : 'disabled'} style="--c:${sk.color}">
+          <span class="tz-num">${open ? l.id : icons.lock}</span>
+          <span class="tz-lv-main">
+            <span class="tz-lv-top">${isNext ? '<em>Próxima fase</em>' : ''}<b>${l.name}</b></span>
+            <span class="tz-focus">${icons.target}${l.focus}<i>· ${sk.name}</i></span>
+            ${open ? `<span class="tz-goal">${l.goal}</span>` : ''}
+          </span>
+          <span class="tz-lv-pts">${r ? `<b>${fmt(r.points)}</b><small>de ${fmt(l.points)}</small>` : `<small>até</small><b>${fmt(l.points)}</b>`}</span>
+        </button>`;
+    };
+
     this.root.innerHTML = `
       <div class="tz-map">
         <header class="tz-top">
           <button class="icon-btn" data-act="home" aria-label="Voltar ao início">${icons.back}</button>
           <h1 class="tz-logo">TENSA</h1>
-          <span class="tz-total">${icons.star}<b>${total}</b>/${LEVELS.length * 3}</span>
         </header>
-        <p class="tz-intro">Estique elásticos entre os pinos, envolva as sementes e deixe tudo florescer. Cada elástico é uma corda: toque e ouça.</p>
-        ${WORLDS.map((w, wi) => `
-          <section class="tz-world" style="--wc:${['#FF6B5E', '#FFD23F', '#3EDBB0', '#A78BFA'][wi]}">
-            <div class="tz-world-head">
-              <h2>${w.name}</h2>
-              <p>${w.blurb}</p>
-            </div>
-            <div class="tz-levels">
-              ${LEVELS.map((l, i) => ({ l, i })).filter(({ l }) => l.world === wi).map(({ l, i }) => {
-                const open = this._unlocked(i);
-                const n = stars[l.id] || 0;
-                return `
-                <button class="lv ${open ? '' : 'locked'} ${n ? 'done' : ''}" data-lv="${l.id}" ${open ? '' : 'disabled'} aria-label="Fase ${l.id}: ${l.name}">
-                  <span class="lv-num">${open ? l.id : icons.lock}</span>
-                  <span class="lv-name">${l.name}</span>
-                  ${open ? starRow(n) : ''}
-                </button>`;
-              }).join('')}
-            </div>
-          </section>`).join('')}
+        <section class="tz-score" style="--rc:${rank.color}">
+          <div><span>Seus pontos no Tensa</span><b>${fmt(pts)}</b><small>de ${fmt(MAX_POINTS)}</small></div>
+          <div class="tz-rank"><span>Faixa</span><b>${rank.name}</b><i><u style="width:${Math.max(3, rank.frac * 100)}%"></u></i></div>
+        </section>
+        <p class="tz-how">${icons.sparkle} Puxe o elástico para trás, mire e solte. Força demais faz a bola espirrar na borda do buraco.</p>
+        <div class="tz-path">${shown.map((l) => card(l, LEVELS.indexOf(l))).join('')}</div>
+        ${hidden > 0 ? `<p class="tz-more">${icons.lock} Mais ${hidden} fase${hidden > 1 ? 's' : ''} com desafios novos: desbloqueie avançando.</p>` : ''}
         <button class="tz-free" data-act="free">
           <span class="tz-free-ico">${icons.sparkle}</span>
-          <span><b>Ateliê livre</b><small>Sem regras: um instrumento de elásticos para criar e relaxar.</small></span>
+          <span><b>Treino livre</b><small>Sem pontos: monte elásticos à vontade e brinque com as tabelas.</small></span>
           <span class="tz-free-go">${icons.play}</span>
         </button>
       </div>`;
@@ -113,10 +116,10 @@ class TensaApp {
     };
   }
 
-  // ---------- Jogo ----------
+  // ---------- Fase ----------
   play(level) {
     const isFree = level.mode === 'free';
-    const isEcho = level.mode === 'echo';
+    const sk = skillOf(level.skill);
     this.root.innerHTML = `
       <div class="tz-play">
         <header class="tz-hud">
@@ -126,16 +129,15 @@ class TensaApp {
             <span class="tz-hud-status" aria-live="polite"></span>
           </div>
           <div class="tz-hud-actions">
-            ${level.mode ? '' : `<button class="icon-btn" data-act="hint" aria-label="Dica">${icons.bulb}</button>`}
-            ${isEcho ? '' : `<button class="icon-btn" data-act="undo" aria-label="Desfazer">${icons.undo}</button>
-            <button class="icon-btn" data-act="clear" aria-label="Recomeçar">${icons.reset}</button>`}
+            ${isFree ? '' : `<button class="tz-help" data-act="help" aria-label="Ajuda">${icons.help}<span>Ajuda</span></button>`}
+            <button class="icon-btn" data-act="restart" aria-label="Recomeçar">${icons.reset}</button>
           </div>
         </header>
+        <div class="tz-focusbar" style="--c:${sk.color}">${icons.target}<span>Treina: <b>${level.focus}</b></span></div>
         <div class="tz-stage">
-          <canvas class="tz-canvas" aria-label="Tabuleiro de elásticos"></canvas>
+          <canvas class="tz-canvas" aria-label="Mesa do Tensa"></canvas>
           <div class="tz-msg" role="status"></div>
         </div>
-        <p class="tz-foot">${isEcho ? 'Toque nas cordas para tocar.' : 'Toque duas vezes num elástico para tirá-lo.'}</p>
       </div>`;
     const status = this.root.querySelector('.tz-hud-status');
     const msg = this.root.querySelector('.tz-msg');
@@ -143,66 +145,87 @@ class TensaApp {
       msg.textContent = text;
       msg.classList.add('show');
       clearTimeout(this.msgTimer);
-      if (!sticky) this.msgTimer = setTimeout(() => msg.classList.remove('show'), 3200);
+      if (!sticky) this.msgTimer = setTimeout(() => msg.classList.remove('show'), 3600);
     };
+    this.helped = false;
 
     this.board = new Board(this.root.querySelector('canvas'), level, {
       audio: this.api.audio,
       haptic: this.api.haptic,
       onMessage: say,
       onStatus: (s) => {
-        if (s.flash) { status.classList.remove('flash'); void status.offsetWidth; status.classList.add('flash'); return; }
-        if (s.echo) { status.textContent = `Rodada ${s.echo.round}/${s.echo.total} · ${s.echo.step}/${s.echo.len}`; return; }
-        if (s.bands != null) status.textContent = s.max ? `Elásticos ${s.bands}/${s.max}` : `${s.bands} elástico${s.bands === 1 ? '' : 's'}`;
+        const parts = [isFree ? `${s.strokes} tacada${s.strokes === 1 ? '' : 's'}` : `Tacadas ${s.strokes} · par ${s.par}`];
+        if (s.bandsLeft != null && !isFree) parts.push(`${s.bandsLeft} elástico${s.bandsLeft === 1 ? '' : 's'} livre${s.bandsLeft === 1 ? '' : 's'}`);
+        status.textContent = parts.join(' · ');
       },
       onWin: (r) => this._win(level, r),
     });
-    if (level.tip && !level.tutorial) say(level.tip);
+    say(level.goal);
 
-    if (isFree) this.freeTimer = setInterval(() => this.api.progress.addXP('criatividade', 1), 60000);
+    if (isFree) this.freeTimer = setInterval(() => this.api.progress.addFreeMinute(), 60000);
 
-    this.root.onclick = (e) => {
+    this.root.onclick = async (e) => {
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (!act || !this.board) return;
       if (act === 'map') { this.api.audio.tick(); this.api.go(''); }
-      if (act === 'undo') this.board.undo();
-      if (act === 'clear') this.board.clear();
-      if (act === 'hint' && this.board.showHint()) say('Siga o contorno pontilhado.');
+      if (act === 'restart') { this.board.restart(); say(level.goal); }
+      if (act === 'help') this._help(level, say);
     };
+  }
+
+  async _help(level, say) {
+    if (!this.helped) {
+      const ok = await this.api.requestHelp({ level: level.id });
+      if (!ok || !this.board) return;
+      this.helped = true;
+    }
+    const board = this.board;
+    if (level.holes.some((h) => h.m)) {
+      board.enableHelp(null);
+      say('Mira completa ligada: a trajetória já considera o movimento do alvo.');
+      return;
+    }
+    if (!grabCandidates(board.world).length) {
+      board.enableHelp(null);
+      say('Mira completa ligada. Monte um elástico passando pela bola para ver a trajetória.');
+      return;
+    }
+    say('Calculando a melhor tacada…', true);
+    const best = await findShot(board.world, { angleStep: 2, pullStep: 0.009 });
+    if (this.board !== board) return;
+    board.enableHelp(best?.shot);
+    say(best ? 'Siga o fantasma: puxe até o círculo e solte.' : 'Daqui não há tacada certa. Recomece a fase. A mira completa fica ligada.');
   }
 
   _win(level, r) {
     clearTimeout(this.msgTimer);
     this.root.querySelector('.tz-msg')?.classList.remove('show');
-    let stars;
-    const notes = [];
-    if (level.mode === 'echo') {
-      stars = r.mistakes === 0 ? 3 : r.mistakes <= 2 ? 2 : 1;
-      notes.push(r.mistakes === 0 ? 'Melodias perfeitas, sem nenhum erro' : `${r.mistakes} tropeço${r.mistakes > 1 ? 's' : ''} no caminho`);
-    } else {
-      const par = level.solution.length;
-      const lean = r.bands <= par;
-      stars = 1 + (lean ? 1 : 0) + (r.hintUsed ? 0 : 1);
-      notes.push(lean ? `Com ${r.bands} elástico${r.bands > 1 ? 's' : ''}, na medida certa` : `Dá para fazer com ${par} elástico${par > 1 ? 's' : ''}`);
-      notes.push(r.hintUsed ? 'Usou dica' : 'Sem dicas');
-    }
-    const skills = WORLDS[level.world].skills;
-    const { prev } = this.api.progress.saveLevel(level.id, stars, skills);
-    const idx = LEVELS.indexOf(level);
-    const next = LEVELS[idx + 1];
-    const title = WIN_TITLES[Math.floor(Math.random() * WIN_TITLES.length)];
+    if (level.mode === 'free') return;
+    const { points, stars } = scoreLevel(level, r.strokes);
+    const saved = this.api.progress.saveLevel(level.id, { points, stars, skill: level.skill });
+    const total = this.api.progress.points();
+    const rank = rankFor(total);
+    const next = LEVELS[LEVELS.indexOf(level) + 1];
+    const sk = skillOf(level.skill);
     const overlay = document.createElement('div');
     overlay.className = 'tz-win';
     overlay.innerHTML = `
       <div class="tz-win-card">
-        <h2>${title}</h2>
-        <div class="tz-win-stars">${[1, 2, 3].map((k) => `<i class="${k <= stars ? 'on' : ''}" style="--d:${k * 0.18}s">${icons.star}</i>`).join('')}</div>
-        <ul>${notes.map((n) => `<li>${n}</li>`).join('')}</ul>
-        ${stars > prev ? `<p class="tz-win-xp">+${stars - prev} em ${skills.map((s) => ({ espacial: 'Espacial', planejamento: 'Planejamento', atencao: 'Atenção', memoria: 'Memória' })[s]).join(' e ')}</p>` : ''}
+        <h2>${WIN_TITLES[Math.floor(Math.random() * WIN_TITLES.length)]}</h2>
+        <div class="tz-win-stars">${[1, 2, 3].map((k) => `<i class="${k <= stars ? 'on' : ''}" style="--d:${k * 0.16}s">${icons.star}</i>`).join('')}</div>
+        <p class="tz-win-pts"><b>+${fmt(points)}</b> pts</p>
+        <ul>
+          <li>${r.strokes} tacada${r.strokes > 1 ? 's' : ''} · par ${level.par}</li>
+          <li style="color:${sk.color}">Treinou: ${level.focus}</li>
+          ${saved.gained > 0 && saved.prev > 0 ? `<li>Novo recorde: +${fmt(saved.gained)} sobre a melhor marca</li>` : ''}
+          ${saved.gained === 0 ? `<li>Sua melhor marca continua ${fmt(saved.best)}</li>` : ''}
+          ${r.helpUsed ? '<li>Com ajuda: lembre de cumprir sua boa ação 💜</li>' : ''}
+        </ul>
+        <p class="tz-win-total">Tensa: ${fmt(total)} pts · <b style="color:${rank.color}">${rank.name}</b></p>
         <div class="tz-win-actions">
           <button class="icon-btn" data-w="map" aria-label="Mapa">${icons.map}</button>
           <button class="icon-btn" data-w="again" aria-label="Jogar de novo">${icons.reset}</button>
-          ${next ? `<button class="cta" data-w="next">Próxima ${icons.next}</button>` : `<button class="cta" data-w="map">Concluído!</button>`}
+          ${next ? `<button class="cta" data-w="next">Próxima ${icons.next}</button>` : '<button class="cta" data-w="map">Concluído!</button>'}
         </div>
       </div>`;
     this.root.querySelector('.tz-play').appendChild(overlay);

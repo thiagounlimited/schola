@@ -1,12 +1,12 @@
 {
   "name": "SCHOLA",
   "short_name": "SCHOLA",
-  "description": "Jogos leves para desenvolver habilidades cognitivas.",
+  "description": "Treino cognitivo em forma de jogo.",
   "start_url": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0B0A26",
-  "theme_color": "#0B0A26",
+  "background_color": "#05050C",
+  "theme_color": "#05050C",
   "lang": "pt-BR",
   "icons": [
     { "src": "brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
