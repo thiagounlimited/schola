@@ -1,5 +1,7 @@
 // Sistema único de pontuação do SCHOLA: cada jogo vai de 0 a 1.000.000 pontos,
 // distribuídos entre as suas fases, com as mesmas faixas de nível para todos os jogos.
+import { locale } from './i18n.js';
+
 export const MAX_POINTS = 1_000_000;
 
 export const RANKS = [
@@ -29,5 +31,5 @@ export function distributePoints(weights) {
   return pts;
 }
 
-const nf = new Intl.NumberFormat('pt-BR');
+const nf = new Intl.NumberFormat(locale());
 export const fmt = (n) => nf.format(Math.round(n));

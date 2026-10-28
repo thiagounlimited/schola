@@ -6,6 +6,7 @@ import {
 } from './physics.js';
 import { grabCandidates } from './solver.js';
 import { noteFreq } from '../../js/audio.js';
+import { L } from '../../js/i18n.js';
 
 export const BALL_COLORS = ['#FF6B5E', '#3EDBB0', '#FFD23F'];
 const CUE = '#F3F3FB';
@@ -168,7 +169,7 @@ export class Board {
       const band = this.world.bands[hit.band];
       const moving = anyMoving(this.world);
       const ball = moving ? -1 : loadableBall(this.world, band, hit.s);
-      if (moving && loadedHere) this.hooks.onMessage?.('Espere as bolas pararem para a próxima tacada.');
+      if (moving && loadedHere) this.hooks.onMessage?.(L('Espere as bolas pararem para a próxima tacada.', 'Wait for the balls to stop before the next shot.'));
       this.drags.set(e.pointerId, { kind: 'pull', band: hit.band, s: hit.s, ball, sx: p.x, sy: p.y, dx: 0, dy: 0 });
       this.vis[hit.band].s = hit.s;
       if (ball >= 0) this.hooks.audio.pluck(noteFreq(4), 0.2, this._pan(p.x), 0.3);
@@ -251,7 +252,7 @@ export class Board {
     if (this.bandsLeft <= 0) {
       this.hooks.audio.nope();
       this.hooks.haptic(25);
-      this.hooks.onMessage?.(this.level.maxBands === 1 ? 'Só 1 elástico nesta fase. Toque duas vezes nele para tirar e montar outro.' : `Limite de ${this.level.maxBands} elásticos. Toque duas vezes num para tirá-lo.`);
+      this.hooks.onMessage?.(this.level.maxBands === 1 ? L('Só 1 elástico nesta fase. Toque duas vezes nele para tirar e montar outro.', 'Only 1 band in this level. Double-tap it to remove it and set up another.') : L(`Limite de ${this.level.maxBands} elásticos. Toque duas vezes num para tirá-lo.`, `Limit of ${this.level.maxBands} bands. Double-tap one to remove it.`));
       return;
     }
     if (this.world.bands.some((b) => (b.a === d.from && b.b === d.target) || (b.b === d.from && b.a === d.target))) return;
@@ -332,7 +333,7 @@ export class Board {
         audio.pluck(this._bandFreq(this.world.bands[ev.band]), 0.25 + vol * 0.6, pan, 1);
         haptic(10);
       }
-      if (ev.type === 'lip') { audio.pluck(noteFreq(8), 0.3, pan, 0.2); setTimeout(() => audio.pluck(noteFreq(9), 0.25, pan, 0.2), 70); this.hooks.onMessage?.('Forte demais! A bola espirrou na borda.'); }
+      if (ev.type === 'lip') { audio.pluck(noteFreq(8), 0.3, pan, 0.2); setTimeout(() => audio.pluck(noteFreq(9), 0.25, pan, 0.2), 70); this.hooks.onMessage?.(L('Forte demais! A bola espirrou na borda.', 'Too hard! The ball lipped out.')); }
       if (ev.type === 'drop') { const hole = this.world.holes[ev.hole]; audio.chime(noteFreq(12), 0.7, this._pan(this.X(hole.x))); haptic(25); }
       if (ev.type === 'sunk') {
         const hole = this.world.holes[ev.hole];
@@ -344,7 +345,7 @@ export class Board {
         audio.nope();
         haptic(30);
         const b = this.world.balls[ev.ball];
-        this.hooks.onMessage?.(b.cue ? 'A bola branca não pode entrar. Ela volta ao início.' : 'Buraco de outra cor! A bola volta ao início.');
+        this.hooks.onMessage?.(b.cue ? L('A bola branca não pode entrar. Ela volta ao início.', 'The white ball can\'t go in. It goes back to the start.') : L('Buraco de outra cor! A bola volta ao início.', 'Wrong color hole! The ball goes back to the start.'));
       }
     }
     this.world.events.length = 0;
@@ -385,7 +386,7 @@ export class Board {
     if (anyMoving(w) || this.strokes === 0 || this.drags.size) { this.stuckFor = 0; return; }
     if (grabCandidates(w).length) { this.stuckFor = 0; return; }
     if (this.bandsLeft > 0) {
-      if (!this.stuckShown) { this.stuckShown = true; this.hooks.onMessage?.('Monte um elástico passando pela bola para a próxima tacada.'); }
+      if (!this.stuckShown) { this.stuckShown = true; this.hooks.onMessage?.(L('Monte um elástico passando pela bola para a próxima tacada.', 'Set up a band across the ball for your next shot.')); }
       return;
     }
     this.stuckFor = (this.stuckFor || 0) + dt;
@@ -397,7 +398,7 @@ export class Board {
     Object.assign(ball, { x: ball.home.x, y: ball.home.y, vx: 0, vy: 0 });
     this.fx.push({ type: 'ring', x: this.X(ball.x), y: this.Y(ball.y), t0: this.time, life: 0.6, color: '#B4B4FF', big: true });
     this.hooks.audio.pluck(noteFreq(9), 0.3, 0, 0.4);
-    this.hooks.onMessage?.('A bola voltou ao estilingue. Ajuste a força e tente de novo.');
+    this.hooks.onMessage?.(L('A bola voltou ao estilingue. Ajuste a força e tente de novo.', 'The ball is back in the slingshot. Adjust your force and try again.'));
   }
 
   // ---------- Desenho ----------

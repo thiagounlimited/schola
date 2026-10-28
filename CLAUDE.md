@@ -9,16 +9,18 @@ Plataforma web de jogos cognitivos: um **shell** (abertura, cadastro com avatar-
 
 ## Estrutura
 - `index.html`, `css/schola.css`: shell e tokens visuais (preto profundo, Space Grotesk + Inter, neon magenta/ciano do logo "anel de foco").
-- `js/main.js`: roteamento por hash (`#/<jogo>/<sub-rota>`), cadastro/entrada, hub, mural + dashboard, folha de Ajuda, registro `GAMES`. Todo texto vindo de outros jogadores passa por `esc()`.
+- `js/main.js`: só a abertura com a escolha de idioma (PT/EN). Depois do toque, inicia o áudio e carrega `js/app.js` com `import()` dinâmico.
+- `js/app.js`: roteamento por hash (`#/<jogo>/<sub-rota>`, `#/mente/<trilha>`), cadastro/entrada, hub (trilhas, cards de jogo, Boas Ações), página de cada trilha (o que desenvolve, tabela de fases por jogo, métricas, comparação com todos os jogadores), folha de Ajuda, registro `GAMES`. Todo texto vindo de outros jogadores passa por `esc()`.
+- `js/i18n.js`: `L(pt, en)` devolve o texto no idioma escolhido (`schola.lang` no localStorage). Como o app só carrega depois da escolha, `L()` pode ser usado até em constantes de módulo. Trocar de idioma nos Ajustes recarrega a página. **Todo texto novo de interface precisa das duas línguas.**
 - `js/store.js`: usuários (login só por apelido), pontos, histórico mensal, compromissos e boas ações. Sempre salva em localStorage (`schola.v2`); com Supabase configurado, sincroniza perfis e publica boas ações.
 - `js/config.js`: `SUPABASE_URL` e `SUPABASE_ANON_KEY`. Vazios = modo local. Tabelas e regras (RLS) em `supabase/schema.sql`.
 - `js/scoring.js`: escala única 0–1.000.000 por jogo e faixas Beginner → Elite; `distributePoints(pesos)` reparte o milhão entre as fases.
-- `js/catalog.js`: trilhas (`SKILLS`), avatares-órgão com índice de ligação (`AVATARS`), lista de boas ações (`DEEDS`).
-- `js/audio.js`: `SoundEngine` sintetizado (pentatônica). `init()` só dentro de gesto do usuário.
-- `assets/`: imagens dos avatares e das trilhas (WebP). `brand/`: logo atual; `brand/logos/` guarda as propostas do Higgsfield.
+- `js/catalog.js`: trilhas (`SKILLS`, com `gains` e `life`), avatares-órgão com índice de ligação (`AVATARS`), boas ações com imagem e trilha que exercitam (`DEEDS`) e selos de impacto (`BADGES`).
+- `js/audio.js`: `SoundEngine` sintetizado (pentatônica). `init()` só dentro de gesto do usuário. A música ambiente é "wellness": acordes longos em Dó maior que mudam a cada 10 s (ritmo de ~6 respirações/min), mar de ruído rosado que "respira" e notas de kalimba esparsas.
+- `assets/`: imagens dos avatares, das trilhas e das boas ações (`assets/deeds/<id>.webp`), em WebP. Trilhas, boas ações e capas dos jogos seguem uma direção única: fotografia editorial real, luz quente de fim de tarde, fundo escuro, grão de filme, um acento de cor da trilha. `brand/`: logo atual; `brand/logos/` guarda as propostas do Higgsfield.
 
 ## Contrato de sub-jogo
-`games/<id>/index.js` exporta `{ id, title, tagline, accent, cover, skills, mount(root, api) }`; `mount` retorna `{ route(path), destroy() }`.
+`games/<id>/index.js` exporta `{ id, title, tagline, accent, cover, skills, levels, free: { name, skill, focus, path }, mount(root, api) }` (`levels` e `free` alimentam os cards de jogo e a página da trilha); `mount` retorna `{ route(path), destroy() }`.
 O `api` traz `audio`, `haptic`, `go(subrota)`, `home()`, `requestHelp(ctx) → Promise<boolean>` (abre a folha de boa ação; true = jogador se comprometeu) e `progress.{levels, points, saveLevel(levelId, {points, stars, skill}), addFreeMinute}`.
 Todo jogo deve: distribuir 1.000.000 pontos entre as fases, marcar cada fase com uma trilha (`skill`) e um foco específico, e oferecer o botão Ajuda ligado a `requestHelp`.
 

@@ -5,15 +5,18 @@ import { findShot, grabCandidates } from './solver.js';
 import { icons } from '../../js/icons.js';
 import { SKILLS } from '../../js/catalog.js';
 import { rankFor, fmt, MAX_POINTS } from '../../js/scoring.js';
+import { L } from '../../js/i18n.js';
 
 const CSS_ID = 'tensa-css';
-const WIN_TITLES = ['Na mosca!', 'Que tacada!', 'Precisão pura!', 'Encaçapou!'];
+const WIN_TITLES = L(['Na mosca!', 'Que tacada!', 'Precisão pura!', 'Encaçapou!'], ['Bullseye!', 'What a shot!', 'Pure precision!', 'Sunk it!']);
 const skillOf = (id) => SKILLS.find((s) => s.id === id);
 
 export default {
   id: 'tensa',
   title: 'TENSA',
-  tagline: 'Estique o elástico, mire e encaçape. Bilhar e golfe movidos a tensão.',
+  tagline: L('Estique o elástico, mire e encaçape. Bilhar e golfe movidos a tensão.', 'Stretch the band, aim and sink it. Pool and golf powered by tension.'),
+  levels: LEVELS,
+  free: { name: FREE.name, skill: FREE.skill, focus: FREE.focus, path: 'livre' },
   accent: '#FF4FD8',
   cover: new URL('./cover.webp', import.meta.url).href,
   skills: ['espacial', 'planejamento', 'atencao', 'memoria'],
@@ -80,30 +83,30 @@ class TensaApp {
         <button class="tz-level ${isNext ? 'next' : ''} ${open ? '' : 'locked'} ${r ? 'done' : ''}" data-lv="${l.id}" ${open ? '' : 'disabled'} style="--c:${sk.color}">
           <span class="tz-num">${open ? l.id : icons.lock}</span>
           <span class="tz-lv-main">
-            <span class="tz-lv-top">${isNext ? '<em>Próxima fase</em>' : ''}<b>${l.name}</b></span>
+            <span class="tz-lv-top">${isNext ? `<em>${L('Próxima fase', 'Next level')}</em>` : ''}<b>${l.name}</b></span>
             <span class="tz-focus">${icons.target}${l.focus}<i>· ${sk.name}</i></span>
             ${open ? `<span class="tz-goal">${l.goal}</span>` : ''}
           </span>
-          <span class="tz-lv-pts">${r ? `<b>${fmt(r.points)}</b><small>de ${fmt(l.points)}</small>` : `<small>até</small><b>${fmt(l.points)}</b>`}</span>
+          <span class="tz-lv-pts">${r ? `<b>${fmt(r.points)}</b><small>${L('de', 'of')} ${fmt(l.points)}</small>` : `<small>${L('até', 'up to')}</small><b>${fmt(l.points)}</b>`}</span>
         </button>`;
     };
 
     this.root.innerHTML = `
       <div class="tz-map">
         <header class="tz-top">
-          <button class="icon-btn" data-act="home" aria-label="Voltar ao início">${icons.back}</button>
+          <button class="icon-btn" data-act="home" aria-label="${L('Voltar ao início', 'Back to home')}">${icons.back}</button>
           <h1 class="tz-logo">TENSA</h1>
         </header>
         <section class="tz-score" style="--rc:${rank.color}">
-          <div><span>Seus pontos no Tensa</span><b>${fmt(pts)}</b><small>de ${fmt(MAX_POINTS)}</small></div>
-          <div class="tz-rank"><span>Faixa</span><b>${rank.name}</b><i><u style="width:${Math.max(3, rank.frac * 100)}%"></u></i></div>
+          <div><span>${L('Seus pontos no Tensa', 'Your Tensa points')}</span><b>${fmt(pts)}</b><small>${L('de', 'of')} ${fmt(MAX_POINTS)}</small></div>
+          <div class="tz-rank"><span>${L('Faixa', 'Rank')}</span><b>${rank.name}</b><i><u style="width:${Math.max(3, rank.frac * 100)}%"></u></i></div>
         </section>
-        <p class="tz-how">${icons.sparkle} Puxe o elástico para trás, mire e solte. Força demais faz a bola espirrar na borda do buraco.</p>
+        <p class="tz-how">${icons.sparkle} ${L('Puxe o elástico para trás, mire e solte. Força demais faz a bola espirrar na borda do buraco.', 'Pull the band back, aim and release. Too much force makes the ball lip out of the hole.')}</p>
         <div class="tz-path">${shown.map((l) => card(l, LEVELS.indexOf(l))).join('')}</div>
-        ${hidden > 0 ? `<p class="tz-more">${icons.lock} Mais ${hidden} fase${hidden > 1 ? 's' : ''} com desafios novos: desbloqueie avançando.</p>` : ''}
+        ${hidden > 0 ? `<p class="tz-more">${icons.lock} ${L(`Mais ${hidden} fase${hidden > 1 ? 's' : ''} com desafios novos: desbloqueie avançando.`, `${hidden} more level${hidden > 1 ? 's' : ''} with new challenges: unlock them as you go.`)}</p>` : ''}
         <button class="tz-free" data-act="free">
           <span class="tz-free-ico">${icons.sparkle}</span>
-          <span><b>Treino livre</b><small>Sem pontos: monte elásticos à vontade e brinque com as tabelas.</small></span>
+          <span><b>${FREE.name}</b><small>${L('Sem pontos: monte elásticos à vontade e brinque com as tabelas.', 'No points: set up as many bands as you like and play with bank shots.')}</small></span>
           <span class="tz-free-go">${icons.play}</span>
         </button>
       </div>`;
@@ -123,19 +126,19 @@ class TensaApp {
     this.root.innerHTML = `
       <div class="tz-play">
         <header class="tz-hud">
-          <button class="icon-btn" data-act="map" aria-label="Voltar ao mapa">${icons.back}</button>
+          <button class="icon-btn" data-act="map" aria-label="${L('Voltar ao mapa', 'Back to map')}">${icons.back}</button>
           <div class="tz-hud-title">
             <span class="tz-hud-name">${isFree ? level.name : `${level.id} · ${level.name}`}</span>
             <span class="tz-hud-status" aria-live="polite"></span>
           </div>
           <div class="tz-hud-actions">
-            ${isFree ? '' : `<button class="tz-help" data-act="help" aria-label="Ajuda">${icons.help}<span>Ajuda</span></button>`}
-            <button class="icon-btn" data-act="restart" aria-label="Recomeçar">${icons.reset}</button>
+            ${isFree ? '' : `<button class="tz-help" data-act="help" aria-label="${L('Ajuda', 'Help')}">${icons.help}<span>${L('Ajuda', 'Help')}</span></button>`}
+            <button class="icon-btn" data-act="restart" aria-label="${L('Recomeçar', 'Restart')}">${icons.reset}</button>
           </div>
         </header>
-        <div class="tz-focusbar" style="--c:${sk.color}">${icons.target}<span>Treina: <b>${level.focus}</b></span></div>
+        <div class="tz-focusbar" style="--c:${sk.color}">${icons.target}<span>${L('Treina', 'Trains')}: <b>${level.focus}</b></span></div>
         <div class="tz-stage">
-          <canvas class="tz-canvas" aria-label="Mesa do Tensa"></canvas>
+          <canvas class="tz-canvas" aria-label="${L('Mesa do Tensa', 'Tensa table')}"></canvas>
           <div class="tz-msg" role="status"></div>
         </div>
       </div>`;
@@ -154,8 +157,8 @@ class TensaApp {
       haptic: this.api.haptic,
       onMessage: say,
       onStatus: (s) => {
-        const parts = [isFree ? `${s.strokes} tacada${s.strokes === 1 ? '' : 's'}` : `Tacadas ${s.strokes} · par ${s.par}`];
-        if (s.bandsLeft != null && !isFree) parts.push(`${s.bandsLeft} elástico${s.bandsLeft === 1 ? '' : 's'} livre${s.bandsLeft === 1 ? '' : 's'}`);
+        const parts = [isFree ? L(`${s.strokes} tacada${s.strokes === 1 ? '' : 's'}`, `${s.strokes} shot${s.strokes === 1 ? '' : 's'}`) : L(`Tacadas ${s.strokes} · par ${s.par}`, `Shots ${s.strokes} · par ${s.par}`)];
+        if (s.bandsLeft != null && !isFree) parts.push(L(`${s.bandsLeft} elástico${s.bandsLeft === 1 ? '' : 's'} livre${s.bandsLeft === 1 ? '' : 's'}`, `${s.bandsLeft} band${s.bandsLeft === 1 ? '' : 's'} left`));
         status.textContent = parts.join(' · ');
       },
       onWin: (r) => this._win(level, r),
@@ -182,19 +185,19 @@ class TensaApp {
     const board = this.board;
     if (level.holes.some((h) => h.m)) {
       board.enableHelp(null);
-      say('Mira completa ligada: a trajetória já considera o movimento do alvo.');
+      say(L('Mira completa ligada: a trajetória já considera o movimento do alvo.', 'Full aim on: the path already accounts for the moving target.'));
       return;
     }
     if (!grabCandidates(board.world).length) {
       board.enableHelp(null);
-      say('Mira completa ligada. Monte um elástico passando pela bola para ver a trajetória.');
+      say(L('Mira completa ligada. Monte um elástico passando pela bola para ver a trajetória.', 'Full aim on. Set up a band across the ball to see the path.'));
       return;
     }
-    say('Calculando a melhor tacada…', true);
+    say(L('Calculando a melhor tacada…', 'Working out the best shot…'), true);
     const best = await findShot(board.world, { angleStep: 2, pullStep: 0.009 });
     if (this.board !== board) return;
     board.enableHelp(best?.shot);
-    say(best ? 'Siga o fantasma: puxe até o círculo e solte.' : 'Daqui não há tacada certa. Recomece a fase. A mira completa fica ligada.');
+    say(best ? L('Siga o fantasma: puxe até o círculo e solte.', 'Follow the ghost: pull to the circle and release.') : L('Daqui não há tacada certa. Recomece a fase. A mira completa fica ligada.', 'There is no sure shot from here. Restart the level. Full aim stays on.'));
   }
 
   _win(level, r) {
@@ -215,17 +218,17 @@ class TensaApp {
         <div class="tz-win-stars">${[1, 2, 3].map((k) => `<i class="${k <= stars ? 'on' : ''}" style="--d:${k * 0.16}s">${icons.star}</i>`).join('')}</div>
         <p class="tz-win-pts"><b>+${fmt(points)}</b> pts</p>
         <ul>
-          <li>${r.strokes} tacada${r.strokes > 1 ? 's' : ''} · par ${level.par}</li>
-          <li style="color:${sk.color}">Treinou: ${level.focus}</li>
-          ${saved.gained > 0 && saved.prev > 0 ? `<li>Novo recorde: +${fmt(saved.gained)} sobre a melhor marca</li>` : ''}
-          ${saved.gained === 0 ? `<li>Sua melhor marca continua ${fmt(saved.best)}</li>` : ''}
-          ${r.helpUsed ? '<li>Com ajuda: lembre de cumprir sua boa ação 💜</li>' : ''}
+          <li>${L(`${r.strokes} tacada${r.strokes > 1 ? 's' : ''}`, `${r.strokes} shot${r.strokes > 1 ? 's' : ''}`)} · par ${level.par}</li>
+          <li style="color:${sk.color}">${L('Treinou', 'Trained')}: ${level.focus}</li>
+          ${saved.gained > 0 && saved.prev > 0 ? `<li>${L('Novo recorde', 'New record')}: +${fmt(saved.gained)} ${L('sobre a melhor marca', 'over your best')}</li>` : ''}
+          ${saved.gained === 0 ? `<li>${L('Sua melhor marca continua', 'Your best is still')} ${fmt(saved.best)}</li>` : ''}
+          ${r.helpUsed ? `<li>${L('Com ajuda: lembre de cumprir sua boa ação 💜', 'With help: remember to do your good deed 💜')}</li>` : ''}
         </ul>
         <p class="tz-win-total">Tensa: ${fmt(total)} pts · <b style="color:${rank.color}">${rank.name}</b></p>
         <div class="tz-win-actions">
-          <button class="icon-btn" data-w="map" aria-label="Mapa">${icons.map}</button>
-          <button class="icon-btn" data-w="again" aria-label="Jogar de novo">${icons.reset}</button>
-          ${next ? `<button class="cta" data-w="next">Próxima ${icons.next}</button>` : '<button class="cta" data-w="map">Concluído!</button>'}
+          <button class="icon-btn" data-w="map" aria-label="${L('Mapa', 'Map')}">${icons.map}</button>
+          <button class="icon-btn" data-w="again" aria-label="${L('Jogar de novo', 'Play again')}">${icons.reset}</button>
+          ${next ? `<button class="cta" data-w="next">${L('Próxima', 'Next')} ${icons.next}</button>` : `<button class="cta" data-w="map">${L('Concluído!', 'All done!')}</button>`}
         </div>
       </div>`;
     this.root.querySelector('.tz-play').appendChild(overlay);

@@ -1,4 +1,4 @@
-// Motor de som do SCHOLA: cordas dedilhadas, sinos e um pad ambiente suave.
+// Motor de som do SCHOLA: cordas dedilhadas, sinos e uma trilha ambiente "wellness".
 // Tudo é sintetizado com Web Audio — nenhum arquivo de áudio é carregado.
 
 // Escala pentatônica de Dó (C3 → C6): qualquer combinação soa consonante.
@@ -211,45 +211,116 @@ export class SoundEngine {
     this.flow.g.gain.setTargetAtTime(0.0001 + 0.05 * level, this.ctx.currentTime, 0.6);
   }
 
+  // Trilha ambiente "wellness": acordes longos e quentes que mudam a cada respiração (10 s,
+  // ~6 respirações por minuto, o ritmo da respiração de coerência), um mar de ruído suave
+  // que sobe e desce no mesmo compasso e notas de kalimba esparsas. Tudo em Dó maior, para
+  // os efeitos dos jogos (pentatônica) sempre soarem consonantes.
   _startPad() {
     if (this.pad || !this.ctx) return;
     const { ctx } = this;
     const t = ctx.currentTime;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.045, t + 4);
-    const f = ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.value = 520;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.05;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 260;
-    lfo.connect(lfoGain).connect(f.frequency);
-    g.connect(f).connect(this.bus);
-    const oscs = [65.41, 98.0, 130.81, 196.0].map((fr, i) => {
-      const o = ctx.createOscillator();
-      o.type = i % 2 ? 'sine' : 'triangle';
-      o.frequency.value = fr;
-      o.detune.value = (i - 1.5) * 4;
-      const og = ctx.createGain();
-      og.gain.value = [0.5, 0.35, 0.25, 0.12][i];
-      o.connect(og).connect(g);
-      o.start();
-      return o;
-    });
-    lfo.start();
-    this.pad = { g, oscs: [...oscs, lfo] };
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.linearRampToValueAtTime(1, t + 6);
+    const warm = ctx.createBiquadFilter();
+    warm.type = 'lowpass';
+    warm.frequency.value = 1800;
+    out.connect(warm).connect(this.bus);
+
+    // Mar: ruído rosado filtrado, com volume que "respira".
+    const len = ctx.sampleRate * 4;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = 0.997 * b0 + w * 0.029; b1 = 0.985 * b1 + w * 0.032; b2 = 0.95 * b2 + w * 0.048;
+      d[i] = (b0 + b1 + b2) * 0.35;
+    }
+    const sea = ctx.createBufferSource();
+    sea.buffer = buf;
+    sea.loop = true;
+    const seaF = ctx.createBiquadFilter();
+    seaF.type = 'bandpass';
+    seaF.frequency.value = 420;
+    seaF.Q.value = 0.6;
+    const seaG = ctx.createGain();
+    seaG.gain.value = 0.018;
+    const breath = ctx.createOscillator();
+    breath.frequency.value = 0.1;
+    const breathG = ctx.createGain();
+    breathG.gain.value = 0.014;
+    breath.connect(breathG).connect(seaG.gain);
+    sea.connect(seaF).connect(seaG).connect(out);
+    sea.start(t);
+    breath.start(t);
+
+    const CHORDS = [
+      [48, 55, 64, 71, 74], // Cmaj9
+      [45, 52, 60, 67, 71], // Am9
+      [41, 48, 57, 64, 67], // Fmaj9
+      [43, 50, 57, 62, 64], // G6/9
+    ];
+    const BELLS = [72, 74, 76, 79, 81, 84, 86, 88];
+    const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
+    const BAR = 10;
+    let k = 0;
+    const playChord = () => {
+      if (!this.pad || ctx.state !== 'running') return; // aba escondida: não acumula acordes
+      const now = ctx.currentTime;
+      CHORDS[k++ % CHORDS.length].forEach((m, i) => {
+        const g = ctx.createGain();
+        const peak = [0.03, 0.022, 0.016, 0.011, 0.008][i];
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(peak, now + 4);
+        g.gain.setValueAtTime(peak, now + BAR - 1);
+        g.gain.linearRampToValueAtTime(0.0001, now + BAR + 4);
+        g.connect(out);
+        [['sine', 0], ['triangle', 6]].forEach(([type, det]) => {
+          const o = ctx.createOscillator();
+          o.type = type;
+          o.frequency.value = mtof(m);
+          o.detune.value = det * (i % 2 ? 1 : -1);
+          const og = ctx.createGain();
+          og.gain.value = type === 'sine' ? 1 : 0.35;
+          o.connect(og).connect(g);
+          o.start(now);
+          o.stop(now + BAR + 4.2);
+        });
+      });
+      // Duas ou três notas de kalimba espalhadas no compasso.
+      const n = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < n; i++) {
+        const at = now + 1.5 + Math.random() * (BAR - 3);
+        const fr = mtof(BELLS[Math.floor(Math.random() * BELLS.length)]);
+        [[1, 0.022, 3.2], [3.98, 0.004, 0.6]].forEach(([mul, amp, dur]) => {
+          const o = ctx.createOscillator();
+          o.type = 'sine';
+          o.frequency.value = fr * mul;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, at);
+          g.gain.linearRampToValueAtTime(amp, at + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+          o.connect(g).connect(out);
+          o.start(at);
+          o.stop(at + dur + 0.05);
+        });
+      }
+    };
+    this.pad = { g: out, oscs: [sea, breath], timer: setInterval(playChord, BAR * 1000) };
+    playChord();
   }
 
   _stopPad() {
     if (!this.pad) return;
-    const { g, oscs } = this.pad;
+    const { g, oscs, timer } = this.pad;
+    clearInterval(timer);
     const t = this.ctx.currentTime;
     g.gain.cancelScheduledValues(t);
     g.gain.setValueAtTime(g.gain.value, t);
-    g.gain.linearRampToValueAtTime(0.0001, t + 1.2);
-    oscs.forEach((o) => o.stop(t + 1.3));
+    g.gain.linearRampToValueAtTime(0.0001, t + 1.5);
+    oscs.forEach((o) => o.stop(t + 1.6));
+    setTimeout(() => g.disconnect(), 6000);
     this.pad = null;
   }
 }

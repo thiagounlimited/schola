@@ -3,6 +3,7 @@
 // também sincroniza perfis e publica as boas ações no mural compartilhado.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { deedById } from './catalog.js';
+import { L } from './i18n.js';
 
 const KEY = 'schola.v2';
 const ONLINE = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -62,17 +63,17 @@ export class Store {
 
   async register({ nickname, city, avatar }) {
     const id = keyOf(nickname);
-    if (id.length < 2) return { ok: false, error: 'Escolha um apelido com pelo menos 2 letras.' };
-    if (this.data.users[id]) return { ok: false, error: 'Esse apelido já existe neste aparelho. Entre como usuário existente.' };
+    if (id.length < 2) return { ok: false, error: L('Escolha um apelido com pelo menos 2 letras.', 'Pick a nickname with at least 2 letters.') };
+    if (this.data.users[id]) return { ok: false, error: L('Esse apelido já existe neste aparelho. Entre como usuário existente.', 'That nickname already exists on this device. Sign in as a returning player.') };
     const prof = this._blank({ nickname, city, avatar });
     if (this.online) {
       try {
         const found = await api(`profiles?id=eq.${encodeURIComponent(id)}&select=id`);
-        if (found.length) return { ok: false, error: 'Esse apelido já está em uso. Tente outro.' };
+        if (found.length) return { ok: false, error: L('Esse apelido já está em uso. Tente outro.', 'That nickname is taken. Try another one.') };
         await api('profiles', { method: 'POST', body: this._row(prof), prefer: 'return=minimal' });
       } catch (e) {
         console.warn('SCHOLA: falha ao criar perfil online', e);
-        return { ok: false, error: 'Sem conexão com o servidor agora. Tente de novo em instantes.' };
+        return { ok: false, error: L('Sem conexão com o servidor agora. Tente de novo em instantes.', 'No connection to the server right now. Try again in a moment.') };
       }
     }
     this.data.users[id] = prof;
@@ -92,7 +93,7 @@ export class Store {
         console.warn('SCHOLA: falha ao buscar perfil online', e);
       }
     }
-    if (!prof) return { ok: false, error: 'Não encontramos esse apelido. Confira a grafia ou crie um usuário novo.' };
+    if (!prof) return { ok: false, error: L('Não encontramos esse apelido. Confira a grafia ou crie um usuário novo.', 'We could not find that nickname. Check the spelling or create a new player.') };
     prof.lastSeen = Date.now();
     this.data.users[id] = prof;
     this.data.current = id;
@@ -105,7 +106,7 @@ export class Store {
   _row(p) {
     return {
       id: p.id, nickname: p.nickname, avatar: p.avatar, city: p.city,
-      data: { games: p.games, history: p.history.slice(-400), commitments: p.commitments, freeMinutes: p.freeMinutes, focusMinutes: p.focusMinutes || 0 },
+      data: { games: p.games, history: p.history.slice(-400), commitments: p.commitments, freeMinutes: p.freeMinutes, focusMinutes: p.focusMinutes || 0, deedsDone: p.deedsDone || 0 },
       updated_at: new Date().toISOString(),
     };
   }
@@ -130,6 +131,7 @@ export class Store {
     for (const c of d.commitments || []) if (!commits.has(c.id)) prof.commitments.push(c);
     prof.freeMinutes = Math.max(prof.freeMinutes || 0, d.freeMinutes || 0);
     prof.focusMinutes = Math.max(prof.focusMinutes || 0, d.focusMinutes || 0);
+    prof.deedsDone = Math.max(prof.deedsDone || 0, d.deedsDone || 0);
     return prof;
   }
 
@@ -170,13 +172,30 @@ export class Store {
     return out;
   }
 
-  skillPoints(skillId) {
+  skillPoints(skillId, user = this.user) { return Store.skillPointsOf(user, skillId); }
+
+  // Também usado para os perfis dos outros jogadores (comparação na página da trilha).
+  static skillPointsOf(u, skillId) {
     let pts = 0;
-    for (const g of Object.values(this.user?.games || {}))
-      for (const r of Object.values(g.levels)) if (r.skill === skillId) pts += r.points;
-    if (skillId === 'criatividade') pts += (this.user?.freeMinutes || 0) * 2000;
-    if (skillId === 'atencao') pts += (this.user?.focusMinutes || 0) * 2000;
+    for (const g of Object.values(u?.games || {}))
+      for (const r of Object.values(g.levels || {})) if (r.skill === skillId) pts += r.points;
+    if (skillId === 'criatividade') pts += (u?.freeMinutes || 0) * 2000;
+    if (skillId === 'atencao') pts += (u?.focusMinutes || 0) * 2000;
     return pts;
+  }
+
+  // Pontos de uma trilha mês a mês (últimos n meses), a partir do histórico.
+  skillMonths(skillId, n = 6) {
+    const now = new Date();
+    const keys = Array.from({ length: n }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1)));
+    const out = Object.fromEntries(keys.map((k) => [k, 0]));
+    for (const h of this.user?.history || []) {
+      const sk = h.skill || this.user.games[h.game]?.levels[h.level]?.skill;
+      if (sk !== skillId) continue;
+      const k = monthKey(new Date(h.t));
+      if (k in out) out[k] += h.pts;
+    }
+    return keys.map((k) => ({ key: k, pts: out[k] }));
   }
 
   // Guarda o melhor resultado da fase; só a melhora entra no histórico.
@@ -185,7 +204,7 @@ export class Store {
     const prev = g.levels[levelId]?.points || 0;
     if (points > prev) {
       g.levels[levelId] = { points, stars: Math.max(stars, g.levels[levelId]?.stars || 0), skill, at: Date.now() };
-      this.user.history.push({ t: Date.now(), game: gameId, pts: points - prev });
+      this.user.history.push({ t: Date.now(), game: gameId, level: levelId, skill, pts: points - prev });
       this.save();
       this._sync();
     }
@@ -229,6 +248,8 @@ export class Store {
     }
     const c = u.commitments.find((x) => x.id === commitmentId);
     if (c) c.doneAt = Date.now();
+    u.deedsDone = (u.deedsDone || 0) + 1;
+    u.peopleHelped = (u.peopleHelped || 0) + row.people;
     this.save();
     this._sync();
   }
@@ -239,6 +260,17 @@ export class Store {
       return await api('deeds?select=nickname,avatar,deed_id,title,note,city,people,created_at&order=created_at.desc&limit=500');
     } catch (e) {
       console.warn('SCHOLA: mural indisponível', e);
+      return null;
+    }
+  }
+
+  // Todos os jogadores (para comparar trilhas). Offline: os perfis deste aparelho.
+  async listProfiles() {
+    if (!this.online) return Object.values(this.data.users);
+    try {
+      return await api('profiles?select=id,nickname,avatar,games:data->games,freeMinutes:data->freeMinutes,focusMinutes:data->focusMinutes&limit=2000');
+    } catch (e) {
+      console.warn('SCHOLA: perfis indisponíveis', e);
       return null;
     }
   }

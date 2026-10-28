@@ -1,12 +1,13 @@
 // Lume: motor do jogo. Uma luz de foco (o dedo), chamas que crescem sob o feixe,
 // resíduo de atenção (fios de tarefas abandonadas no meio), estacionar, Fluxo e distrações.
 import { noteFreq } from '../../js/audio.js';
+import { L as tr } from '../../js/i18n.js';
 
 const TAU = Math.PI * 2;
 const KINDS = {
-  task: { core: '#FFB547', glow: '255,170,60', name: 'âmbar' },
-  mini: { core: '#B794FF', glow: '167,139,250', name: 'violeta' },
-  urgent: { core: '#38E1FF', glow: '56,225,255', name: 'sinal' },
+  task: { core: '#FFB547', glow: '255,170,60', name: tr('âmbar', 'amber') },
+  mini: { core: '#B794FF', glow: '167,139,250', name: tr('violeta', 'violet') },
+  urgent: { core: '#38E1FF', glow: '56,225,255', name: tr('sinal', 'signal') },
 };
 const FLOW_FULL = 6;       // segundos contínuos na mesma chama para o Fluxo máximo
 const RESIDUE_SLOW = 0.25; // cada fio aberto deixa o feixe 25% mais lento
@@ -179,18 +180,18 @@ export class Board {
       this.stats.interruptions++;
       this.flowStreak = 0;
       this._spend(L.switchCost || 0);
-      this._float(this._pos(prev), `−${L.switchCost || 0} luz`, '#FF8FD8');
+      this._float(this._pos(prev), tr(`−${L.switchCost || 0} luz`, `−${L.switchCost || 0} light`), '#FF8FD8');
       audio.nope();
       this._tell('residue', L.park
-        ? 'Ficou um fio: resíduo de atenção. Da próxima vez, estacione (⚓) antes de trocar.'
-        : 'Trocar no meio deixa um fio: resíduo de atenção. Ele deixa sua luz mais lenta até você fechar aquela chama.');
+        ? tr('Ficou um fio: resíduo de atenção. Da próxima vez, estacione (⚓) antes de trocar.', 'A thread was left: attention residue. Next time, park (⚓) before switching.')
+        : tr('Trocar no meio deixa um fio: resíduo de atenção. Ele deixa sua luz mais lenta até você fechar aquela chama.', 'Switching halfway leaves a thread: attention residue. It slows your light until you close that flame.'));
     } else if (prev && prev !== g && L.ctxCost && prev.kind !== g.kind && prev.kind !== 'urgent' && g.kind !== 'urgent') {
       this.stats.ctx++;
       this.stats.interruptions++;
       this.flowStreak = 0;
       this._spend(L.ctxCost);
-      this._float(this._pos(g), `−${L.ctxCost} luz`, '#B794FF');
-      this._tell('ctx', 'Mudança de contexto custa luz. Agrupe as chamas do mesmo tipo.');
+      this._float(this._pos(g), tr(`−${L.ctxCost} luz`, `−${L.ctxCost} light`), '#B794FF');
+      this._tell('ctx', tr('Mudança de contexto custa luz. Agrupe as chamas do mesmo tipo.', 'Context switching costs light. Group flames of the same kind.'));
     }
     g.parked = false;
     g.open = false;
@@ -212,7 +213,7 @@ export class Board {
     [0, 2, 4].forEach((s, k) => setTimeout(() => audio.chime(noteFreq(8 + s + (f.i % 3)), 0.55, (q.x / this.w) * 2 - 1), k * 90));
     this.hooks.haptic(22);
     if (f.lux) this._float(q, `+${f.lux} ✦`, '#FFD23F');
-    if (f.kind === 'urgent') this.hooks.onMessage('Sinal atendido. Agora volte para o que estava fazendo.');
+    if (f.kind === 'urgent') this.hooks.onMessage(tr('Sinal atendido. Agora volte para o que estava fazendo.', 'Signal handled. Now go back to what you were doing.'));
     this.focus = null;
   }
 
@@ -226,7 +227,7 @@ export class Board {
     this._ring(q.x, q.y, '#38E1FF');
     this.hooks.audio.chime(noteFreq(3), 0.5);
     this.hooks.haptic(12);
-    this._tell('park', 'Estacionado: você anotou onde parou. Sem fio, sem resíduo.');
+    this._tell('park', tr('Estacionado: você anotou onde parou. Sem fio, sem resíduo.', 'Parked: you noted where you stopped. No thread, no residue.'));
   }
 
   _bait(b) {
@@ -245,8 +246,8 @@ export class Board {
     this._float({ x: b.px, y: b.py }, `+${pts}`, '#FF8FD8');
     this.hooks.audio.pop((b.px / this.w) * 2 - 1);
     this.hooks.haptic(15);
-    if (b.decoy) this._tell('decoy', 'Era ruído: sinais reais são losangos. Bolhas redondas, mesmo ciano, são distração.');
-    else this._tell('bait', `Distração: +${pts} agora, mas o Fluxo zerou${prev && !prev.done ? ' e ficou um fio' : ''}.`);
+    if (b.decoy) this._tell('decoy', tr('Era ruído: sinais reais são losangos. Bolhas redondas, mesmo ciano, são distração.', 'That was noise: real signals are diamonds. Round bubbles, even cyan ones, are distractions.'));
+    else this._tell('bait', tr(`Distração: +${pts} agora, mas o Fluxo zerou${prev && !prev.done ? ' e ficou um fio' : ''}.`, `Distraction: +${pts} now, but your Flow reset${prev && !prev.done ? ' and a thread was left' : ''}.`));
   }
 
   _spawnBubble() {
@@ -342,7 +343,7 @@ export class Board {
           this.hooks.audio.chime(noteFreq(12), 0.6);
           setTimeout(() => this.hooks.audio.chime(noteFreq(14), 0.5), 160);
           this.hooks.haptic(30);
-          this._tell('urgent', L.park ? 'Sinal ciano! Levante o dedo, estacione (⚓) e então atenda.' : 'Sinal ciano: atenda antes que o tempo acabe.');
+          this._tell('urgent', L.park ? tr('Sinal ciano! Levante o dedo, estacione (⚓) e então atenda.', 'Cyan signal! Lift your finger, park (⚓), then answer it.') : tr('Sinal ciano: atenda antes que o tempo acabe.', 'Cyan signal: answer it before time runs out.'));
         }
       }
     }
@@ -358,9 +359,9 @@ export class Board {
         this.stats.interruptions++;
         this._spend(4);
         this.hooks.audio.nope();
-        this.hooks.onMessage('Um sinal real passou sem resposta. Quase! Ele custou 4 de luz.');
+        this.hooks.onMessage(tr('Um sinal real passou sem resposta. Quase! Ele custou 4 de luz.', 'A real signal went unanswered. Almost! It cost 4 light.'));
       } else {
-        this.hooks.onMessage('Essa chama se apagou antes de ser feita.');
+        this.hooks.onMessage(tr('Essa chama se apagou antes de ser feita.', 'That flame faded before it was done.'));
       }
     }
 
@@ -425,16 +426,16 @@ export class Board {
     if (L.goalLux) {
       won = this.lux >= L.goalLux;
       const reach = this.lux + this._live().filter((f) => f.kind !== 'urgent').reduce((a, f) => a + (f.lux || 0), 0);
-      if (!won && reach < L.goalLux) lost = 'Não sobrou brilho suficiente para a meta.';
+      if (!won && reach < L.goalLux) lost = tr('Não sobrou brilho suficiente para a meta.', 'Not enough glow was left to reach the goal.');
     } else if (L.goalCount) {
       won = this.doneCount >= L.goalCount;
       const possible = this.doneCount + work.filter((f) => !f.done && !f.gone).length;
-      if (!won && possible < L.goalCount) lost = 'Chamas demais se apagaram antes de serem feitas.';
+      if (!won && possible < L.goalCount) lost = tr('Chamas demais se apagaram antes de serem feitas.', 'Too many flames faded before they were done.');
     } else {
       won = work.every((f) => f.done);
-      if (!won && work.some((f) => f.gone)) lost = 'Uma chama se apagou antes de ser feita.';
+      if (!won && work.some((f) => f.gone)) lost = tr('Uma chama se apagou antes de ser feita.', 'A flame faded before it was done.');
     }
-    if (!won && !lost && this.energy <= 0) lost = 'Sua luz acabou antes da meta.';
+    if (!won && !lost && this.energy <= 0) lost = tr('Sua luz acabou antes da meta.', 'Your light ran out before the goal.');
     if (won) this._end(true);
     else if (lost) this._end(false, lost);
   }
@@ -547,7 +548,7 @@ export class Board {
     for (const b of this.bubbles) this._drawBubble(b);
     const rec = this.helpOn && !this.ended ? this.recommend() : null;
     const parkFirst = rec && rec.kind !== 'urgent' && L.park && this._live().some((f) => f.kind === 'urgent');
-    for (const f of this.flames) if (f.visible) this._drawFlame(f, f === rec && (parkFirst ? 'estacione antes ⚓' : 'agora esta'));
+    for (const f of this.flames) if (f.visible) this._drawFlame(f, f === rec && (parkFirst ? tr('estacione antes ⚓', 'park first ⚓') : tr('agora esta', 'this one now')));
     this._drawAnchor();
     this._drawFx();
     if (L.tutorial && !this.touched) this._drawTutorial();
@@ -904,7 +905,7 @@ export class Board {
     ctx.font = '600 14px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#BFF6FF';
-    ctx.fillText('segure aqui e acompanhe', q.x, q.y + r * 2.1);
+    ctx.fillText(tr('segure aqui e acompanhe', 'hold here and follow'), q.x, q.y + r * 2.1);
     ctx.restore();
   }
 
@@ -917,7 +918,7 @@ export class Board {
     ctx.font = '500 15px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = `rgba(232, 236, 255, ${0.5 + 0.3 * b.k})`;
-    ctx.fillText(b.inhale ? 'inspire…' : 'solte o ar…', q.x, q.y + this._radius(f) * 2.3);
+    ctx.fillText(b.inhale ? tr('inspire…', 'breathe in…') : tr('solte o ar…', 'breathe out…'), q.x, q.y + this._radius(f) * 2.3);
     ctx.restore();
   }
 
@@ -933,7 +934,7 @@ export class Board {
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(232, 236, 255, 0.65)';
-    ctx.fillText('Luz', 16, y);
+    ctx.fillText(tr('Luz', 'Light'), 16, y);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
     ctx.roundRect(x0, y - 4, x1 - x0, 8, 4);
@@ -951,7 +952,7 @@ export class Board {
     // Fluxo: 5 pontos
     const fl = this.flow();
     ctx.fillStyle = 'rgba(232, 236, 255, 0.65)';
-    ctx.fillText('Fluxo', w - 92, y);
+    ctx.fillText(tr('Fluxo', 'Flow'), w - 92, y);
     for (let k = 0; k < 5; k++) {
       const on = fl >= (k + 1) / 5 - 0.001;
       ctx.fillStyle = on ? '#38E1FF' : 'rgba(255, 255, 255, 0.12)';
