@@ -106,7 +106,7 @@ export class Store {
   _row(p) {
     return {
       id: p.id, nickname: p.nickname, avatar: p.avatar, city: p.city,
-      data: { games: p.games, history: p.history.slice(-400), commitments: p.commitments, freeMinutes: p.freeMinutes, focusMinutes: p.focusMinutes || 0, deedsDone: p.deedsDone || 0 },
+      data: { games: p.games, history: p.history.slice(-400), commitments: p.commitments, freeMinutes: p.freeMinutes, focusMinutes: p.focusMinutes || 0, memoryMinutes: p.memoryMinutes || 0, deedsDone: p.deedsDone || 0 },
       updated_at: new Date().toISOString(),
     };
   }
@@ -123,6 +123,14 @@ export class Store {
       for (const [lv, rec] of Object.entries(gd.levels || {})) {
         if (!mine.levels[lv] || rec.points > mine.levels[lv].points) mine.levels[lv] = rec;
       }
+      // Dados livres do jogo (ex.: glossário do CRUZA): listas se unem, números ficam com o maior.
+      for (const [k, v] of Object.entries(gd.data || {})) {
+        mine.data ||= {};
+        const cur = mine.data[k];
+        if (Array.isArray(v)) mine.data[k] = [...new Set([...(Array.isArray(cur) ? cur : []), ...v])];
+        else if (typeof v === 'number') mine.data[k] = Math.max(typeof cur === 'number' ? cur : 0, v);
+        else if (cur === undefined) mine.data[k] = v;
+      }
     }
     const seen = new Set(prof.history.map((h) => `${h.t}:${h.game}`));
     for (const h of d.history || []) if (!seen.has(`${h.t}:${h.game}`)) prof.history.push(h);
@@ -131,6 +139,7 @@ export class Store {
     for (const c of d.commitments || []) if (!commits.has(c.id)) prof.commitments.push(c);
     prof.freeMinutes = Math.max(prof.freeMinutes || 0, d.freeMinutes || 0);
     prof.focusMinutes = Math.max(prof.focusMinutes || 0, d.focusMinutes || 0);
+    prof.memoryMinutes = Math.max(prof.memoryMinutes || 0, d.memoryMinutes || 0);
     prof.deedsDone = Math.max(prof.deedsDone || 0, d.deedsDone || 0);
     return prof;
   }
@@ -147,6 +156,10 @@ export class Store {
 
   // ---------- Pontos ----------
   game(gameId) { return (this.user.games[gameId] ||= { levels: {} }); }
+
+  // Dados próprios de um jogo (ex.: palavras aprendidas no CRUZA), salvos e sincronizados com o perfil.
+  gameData(gameId) { return (this.game(gameId).data ||= {}); }
+  saveGameData() { this.save(); this._sync(); }
 
   gamePoints(gameId) {
     const g = this.user?.games[gameId];
@@ -181,6 +194,7 @@ export class Store {
       for (const r of Object.values(g.levels || {})) if (r.skill === skillId) pts += r.points;
     if (skillId === 'criatividade') pts += (u?.freeMinutes || 0) * 2000;
     if (skillId === 'atencao') pts += (u?.focusMinutes || 0) * 2000;
+    if (skillId === 'memoria') pts += (u?.memoryMinutes || 0) * 2000;
     return pts;
   }
 
@@ -211,10 +225,12 @@ export class Store {
     return { prev, best: Math.max(prev, points), gained: Math.max(0, points - prev) };
   }
 
-  // Minutos de modo livre: Treino livre do Tensa conta para Criatividade, Respiro do Lume para Atenção.
+  // Minutos de modo livre: Treino livre do Tensa conta para Criatividade, Respiro do Lume para Atenção,
+  // Grade livre do CRUZA para Memória.
   addFreeMinute(skill = 'criatividade') {
     if (!this.user) return;
     if (skill === 'atencao') this.user.focusMinutes = (this.user.focusMinutes || 0) + 1;
+    else if (skill === 'memoria') this.user.memoryMinutes = (this.user.memoryMinutes || 0) + 1;
     else this.user.freeMinutes = (this.user.freeMinutes || 0) + 1;
     this.save();
     this._sync();
@@ -268,7 +284,7 @@ export class Store {
   async listProfiles() {
     if (!this.online) return Object.values(this.data.users);
     try {
-      return await api('profiles?select=id,nickname,avatar,games:data->games,freeMinutes:data->freeMinutes,focusMinutes:data->focusMinutes&limit=2000');
+      return await api('profiles?select=id,nickname,avatar,games:data->games,freeMinutes:data->freeMinutes,focusMinutes:data->focusMinutes,memoryMinutes:data->memoryMinutes&limit=2000');
     } catch (e) {
       console.warn('SCHOLA: perfis indisponíveis', e);
       return null;
@@ -278,7 +294,7 @@ export class Store {
   resetUser() {
     const u = this.user;
     if (!u) return;
-    Object.assign(u, { games: {}, history: [], commitments: [], freeMinutes: 0, focusMinutes: 0 });
+    Object.assign(u, { games: {}, history: [], commitments: [], freeMinutes: 0, focusMinutes: 0, memoryMinutes: 0 });
     this.save();
     this._sync();
   }

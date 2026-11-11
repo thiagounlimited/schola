@@ -4,15 +4,15 @@
 // Cada sub-jogo é um módulo com { id, title, tagline, accent, cover, skills, levels, free, mount(root, api) }.
 import tensa from '../games/tensa/index.js';
 import lume from '../games/lume/index.js';
+import cruza from '../games/cruza/index.js';
 import { Store } from './store.js';
 import { icons } from './icons.js';
 import { SKILLS, AVATARS, DEEDS, BADGES, avatarById, deedById, skillById } from './catalog.js';
 import { RANKS, MAX_POINTS, rankFor, fmt } from './scoring.js';
 import { L, lang, setLang, locale } from './i18n.js';
 
-const GAMES = [tensa, lume];
+const GAMES = [tensa, lume, cruza];
 const COMING_SOON = [
-  { title: L('Em breve', 'Coming soon'), tagline: L('Um desafio de memória de trabalho', 'A working-memory challenge'), color: '#A78BFA' },
   { title: L('Em breve', 'Coming soon'), tagline: L('Um desafio de lógica e padrões', 'A logic and patterns challenge'), color: '#3EDBB0' },
 ];
 
@@ -679,7 +679,7 @@ function trailPage(skill) {
   const thisM = months[5].pts;
   const lastM = months[4].pts;
   const frees = GAMES.filter((g) => g.free?.skill === skill.id);
-  const minutes = skill.id === 'atencao' ? store.user.focusMinutes || 0 : skill.id === 'criatividade' ? store.user.freeMinutes || 0 : 0;
+  const minutes = { atencao: store.user.focusMinutes, criatividade: store.user.freeMinutes, memoria: store.user.memoryMinutes }[skill.id] || 0;
   const games = [...new Set(rows.map((r) => r.game))];
   const monthName = (key) => new Date(`${key}-15`).toLocaleDateString(locale(), { month: 'short' }).replace('.', '');
   const state = { game: 'all', sort: 'order' };
@@ -921,6 +921,8 @@ function openGame(game, sub) {
         points: () => store.gamePoints(game.id),
         saveLevel: (levelId, result) => store.saveLevel(game.id, levelId, result),
         addFreeMinute: (skill) => store.addFreeMinute(skill),
+        data: () => store.gameData(game.id),
+        saveData: () => store.saveGameData(),
       },
     };
     show(el);

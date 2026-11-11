@@ -21,7 +21,7 @@ Plataforma web de jogos cognitivos: um **shell** (abertura, cadastro com avatar-
 
 ## Contrato de sub-jogo
 `games/<id>/index.js` exporta `{ id, title, tagline, accent, cover, skills, levels, free: { name, skill, focus, path }, mount(root, api) }` (`levels` e `free` alimentam os cards de jogo e a página da trilha); `mount` retorna `{ route(path), destroy() }`.
-O `api` traz `audio`, `haptic`, `go(subrota)`, `home()`, `requestHelp(ctx) → Promise<boolean>` (abre a folha de boa ação; true = jogador se comprometeu) e `progress.{levels, points, saveLevel(levelId, {points, stars, skill}), addFreeMinute}`.
+O `api` traz `audio`, `haptic`, `go(subrota)`, `home()`, `requestHelp(ctx) → Promise<boolean>` (abre a folha de boa ação; true = jogador se comprometeu) e `progress.{levels, points, saveLevel(levelId, {points, stars, skill}), addFreeMinute(skill), data(), saveData()}` (`data()` é um objeto livre do jogo, salvo no perfil).
 Todo jogo deve: distribuir 1.000.000 pontos entre as fases, marcar cada fase com uma trilha (`skill`) e um foco específico, e oferecer o botão Ajuda ligado a `requestHelp`.
 
 ## Tensa (estilingue de elástico + bilhar/golfe)
@@ -37,6 +37,16 @@ Todo jogo deve: distribuir 1.000.000 pontos entre as fases, marcar cada fase com
 - Pontos: 60% concluir + 25% calma (cada interrupção além do `par` tira um quarto disso) + 15% tempo em Fluxo. Estrelas pelas interrupções.
 - `node tools/check-lume.js [id]`: um robô "uma coisa de cada vez" precisa vencer cada fase com 3 estrelas; um robô multitarefa mostra o contraste. Rode após mexer em `games/lume/`.
 - Abrir com `?local` desliga o Supabase e expõe `window.__lume` (o `Board` atual) para testes.
+
+## CRUZA (palavras cruzadas para aprender)
+- Objetivo: aprender, não só preencher. Cada palavra tem `clue`, `clue2` (dica mais fácil, usada pela Ajuda), `explain` (didática, até 280 caracteres) e `analogy` (do dia a dia, até 220).
+- `words/<categoria>.js`: bancos por categoria (`atualidades`, `ia`, `ciencia`, `dinheiro`, `bemestar`), 18 palavras em `pt` e 18 em `en`, independentes. Atualidades explica o conceito por trás da notícia, nunca resultados de eventos recentes.
+- `bank.js`: junta os bancos locais com a tabela `public.cruza_words` do Supabase (`supabase/cruza.sql`, gerado por `node tools/export-cruza-sql.js`). Palavras novas entram por INSERT no Supabase, sem publicar o site; a tabela só tem leitura pública.
+- `generator.js`: gerador de palavras cruzadas puro e com semente. A grade de cada fase é a mesma para todos (`seed` da fase + idioma).
+- `levels.js`: 12 fases progressivas (5 → 12 palavras) e `FREE` (Grade livre por categoria, sem pontos; minutos contam para Memória via `addFreeMinute('memoria')`).
+- Ao acertar uma palavra abre o card (explicação + analogia); no fim, um mini-quiz de 3 perguntas (explicação ou analogia com a palavra escondida). Pontos: 70% por completar (cada palavra além de 2 que precisou de outra tentativa tira 5%, mínimo metade) + 10% por resposta certa no quiz. Ajuda = dica extra + primeira letra, por uma boa ação.
+- As palavras aprendidas ficam em `progress.data().learned` (glossário), sincronizadas com o perfil.
+- `node tools/check-cruza.js [id]`: confere o banco (campos, limites, dica sem a resposta) e se todas as fases e grades livres montam nos dois idiomas. Rode após mexer em `games/cruza/`.
 
 ## Convenções
 - Interface em português do Brasil, tom gentil (nunca "game over"). Nomes das faixas de pontos ficam em inglês (decisão do produto).
